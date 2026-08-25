@@ -6,6 +6,39 @@ set -eu
 
 REPO="rahumanrahuu/agent-ledger"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
+FALLBACK_TAGS="v0.2.2 v0.2.0"
+
+asset_exists() {
+  tag="$1"; archive="$2"
+  curl -fsSI -H "User-Agent: agent-ledger-installer" \
+    "https://github.com/$REPO/releases/download/$tag/$archive" >/dev/null 2>&1
+}
+
+latest_tag() {
+  API_RESPONSE="$(curl -fsSL -H "Accept: application/vnd.github.v3+json" -H "User-Agent: agent-ledger-installer" "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null || true)"
+  if [ -n "$API_RESPONSE" ]; then
+    TAG_CANDIDATE="$(echo "$API_RESPONSE" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | head -n 1)"
+    if [ -n "$TAG_CANDIDATE" ] && asset_exists "$TAG_CANDIDATE" "agent-ledger_${TAG_CANDIDATE}_${OS}_${ARCH}.tar.gz"; then
+      echo "$TAG_CANDIDATE"
+      return 0
+    fi
+  fi
+  REDIRECT_HEADER="$(curl -fsSI "https://github.com/$REPO/releases/latest" 2>/dev/null | grep -i "^location:" || true)"
+  if [ -n "$REDIRECT_HEADER" ]; then
+    TAG_CANDIDATE="$(echo "$REDIRECT_HEADER" | sed -E 's/.*tag\/(.*)/\1/' | tr -d '\r\n')"
+    if [ -n "$TAG_CANDIDATE" ] && asset_exists "$TAG_CANDIDATE" "agent-ledger_${TAG_CANDIDATE}_${OS}_${ARCH}.tar.gz"; then
+      echo "$TAG_CANDIDATE"
+      return 0
+    fi
+  fi
+  for FALLBACK in $FALLBACK_TAGS; do
+    if asset_exists "$FALLBACK" "agent-ledger_${FALLBACK}_${OS}_${ARCH}.tar.gz"; then
+      echo "$FALLBACK"
+      return 0
+    fi
+  done
+  return 1
+}
 
 # Check required system utilities
 for tool in curl tar uname; do
@@ -54,30 +87,22 @@ if [ -n "${VERSION:-}" ]; then
     *) TAG="v$VERSION" ;;
   esac
   echo "Installing requested version: $TAG"
-else
+
+  # Auto-fallback to the latest available release if the requested one has no assets
+  if ! asset_exists "$TAG" "agent-ledger_${TAG}_${OS}_${ARCH}.tar.gz"; then
+    echo "Notice: Version $TAG has no published binaries for ${OS}/${ARCH}." >&2
+    echo "Falling back to the latest available release automatically..."
+    TAG=""
+  fi
+fi
+
+if [ -z "${TAG:-}" ]; then
   echo "Determining latest release for $REPO..."
-  TAG=""
-  
-  # Try GitHub Releases API first
-  API_RESPONSE="$(curl -fsSL -H "Accept: application/vnd.github.v3+json" "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null || true)"
-  if [ -n "$API_RESPONSE" ]; then
-    TAG="$(echo "$API_RESPONSE" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | head -n 1)"
-  fi
-  
-  # Fallback to redirect URL inspection
-  if [ -z "$TAG" ]; then
-    REDIRECT_HEADER="$(curl -fsSI "https://github.com/$REPO/releases/latest" 2>/dev/null | grep -i "^location:" || true)"
-    if [ -n "$REDIRECT_HEADER" ]; then
-      TAG="$(echo "$REDIRECT_HEADER" | sed -E 's/.*tag\/(.*)/\1/' | tr -d '\r\n')"
-    fi
-  fi
-  
-  # Fallback default if API rate-limited and no releases yet
-  if [ -z "$TAG" ]; then
-    TAG="v0.2.1"
-    echo "Notice: Could not query latest GitHub release tag dynamically; defaulting to $TAG."
+  if TAG="$(latest_tag)"; then
+    echo "Using version: $TAG"
   else
-    echo "Found latest version: $TAG"
+    echo "Error: Unable to determine an available release. Check https://github.com/$REPO/releases" >&2
+    exit 1
   fi
 fi
 

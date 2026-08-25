@@ -72,7 +72,17 @@ if ($Version) {
         $Tag = $Version
     }
     Write-Host "Installing requested version: $Tag"
-} else {
+
+    # Auto-fallback to the latest available release if the requested one has no assets
+    $RequestedArchive = "agent-ledger_${Tag}_windows_${TargetArch}.zip"
+    if (-not (Test-AssetExists -Tag $Tag -Archive $RequestedArchive)) {
+        Write-Host "Version $Tag has no published binaries for windows/$TargetArch." -ForegroundColor Yellow
+        Write-Host "Falling back to the latest available release automatically..."
+        $Tag = $null
+    }
+}
+
+if (-not $Tag) {
     Write-Host "Determining latest release for $Repo..."
     $Tag = Get-LatestTag
 
@@ -91,7 +101,7 @@ if ($Version) {
         Write-Error "Unable to determine an available release. Check https://github.com/$Repo/releases"
         exit 1
     }
-    Write-Host "Found latest version: $Tag"
+    Write-Host "Using version: $Tag"
 }
 
 $ArchiveName = "agent-ledger_${Tag}_windows_${TargetArch}.zip"
@@ -118,9 +128,6 @@ try {
         Write-Host ""
         Write-Host "Download failed for $Tag ($($_.Exception.Message))." -ForegroundColor Yellow
         Write-Host "Verify the release exists at: https://github.com/$Repo/releases"
-        if (-not $Version) {
-            Write-Host "Attempting fallback to a known-good release..."
-        }
         exit 1
     }
 
