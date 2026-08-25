@@ -48,12 +48,12 @@ No `sudo` or Administrator privileges are required.
 
 **Unix:**
 ```bash
-VERSION=v0.2.1 curl -fsSL https://raw.githubusercontent.com/rahumanrahuu/agent-ledger/main/install.sh | sh
+VERSION=v0.2.2 curl -fsSL https://raw.githubusercontent.com/rahumanrahuu/agent-ledger/main/install.sh | sh
 ```
 
 **Windows PowerShell:**
 ```powershell
-$env:VERSION="v0.2.1"; irm https://raw.githubusercontent.com/rahumanrahuu/agent-ledger/main/install.ps1 | iex
+$env:VERSION="v0.2.2"; irm https://raw.githubusercontent.com/rahumanrahuu/agent-ledger/main/install.ps1 | iex
 ```
 
 ### Verify installation
@@ -357,12 +357,12 @@ https://github.com/rahumanrahuu/agent-ledger/releases
 Each release contains archives for all supported platforms:
 
 ```
-agent-ledger_v0.2.1_darwin_arm64.tar.gz
-agent-ledger_v0.2.1_darwin_amd64.tar.gz
-agent-ledger_v0.2.1_linux_arm64.tar.gz
-agent-ledger_v0.2.1_linux_amd64.tar.gz
-agent-ledger_v0.2.1_windows_arm64.zip
-agent-ledger_v0.2.1_windows_amd64.zip
+agent-ledger_v0.2.2_darwin_arm64.tar.gz
+agent-ledger_v0.2.2_darwin_amd64.tar.gz
+agent-ledger_v0.2.2_linux_arm64.tar.gz
+agent-ledger_v0.2.2_linux_amd64.tar.gz
+agent-ledger_v0.2.2_windows_arm64.zip
+agent-ledger_v0.2.2_windows_amd64.zip
 checksums.txt
 ```
 
@@ -373,8 +373,8 @@ Each archive contains `agent-ledger` and `ledger-mcp` (with `.exe` on Windows).
 Releases are built automatically by GitHub Actions when a version tag is pushed:
 
 ```bash
-git tag v0.2.1
-git push origin v0.2.1
+git tag v0.2.2
+git push origin v0.2.2
 ```
 
 The workflow runs `go test ./...`, then builds and packages binaries for all platforms using GoReleaser.
