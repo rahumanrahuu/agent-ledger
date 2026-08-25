@@ -421,6 +421,18 @@ agent-ledger/
 
 ---
 
+## Development Workflow
+
+Agent Ledger follows a simple branch-based workflow:
+
+1. **Development**: All normal development happens on the `dev` branch.
+2. **Commit and Push**: Commit your changes and push them to `dev`.
+3. **Merge**: Once tested and stable, merge the `dev` branch into the `main` branch.
+4. **Release**: Create a version tag (e.g., `v0.3.0`) on the `main` branch.
+5. **Publish**: The GitHub Actions release workflow will automatically build and publish the release. Tags created from `dev` or any other branch will fail the release verification.
+
+---
+
 ## Running Tests
 
 ```bash
