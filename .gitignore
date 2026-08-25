@@ -1,10 +1,15 @@
 # Build artifacts and binaries
-ledger
-ledger-mcp
-agent-ledger
-agent-ledger.exe
-ledger-mcp.exe
-dist/
+/ledger
+/ledger-mcp
+/agent-ledger
+/agent-ledger.exe
+/ledger-mcp.exe
+/dist/
+
+# Agent Ledger local runtime state
+.agent/
+
+# Archives
 *.tar.gz
 *.zip
 
