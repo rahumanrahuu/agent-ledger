@@ -10,6 +10,48 @@ param (
 $ErrorActionPreference = "Stop"
 
 $Repo = "rahumanrahuu/agent-ledger"
+# Known-good tags with published assets, used only if the GitHub API is unreachable.
+$FallbackTags = @("v0.2.2", "v0.2.0")
+
+# Ensure TLS 1.2+ on older PowerShell hosts
+try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+} catch { }
+
+function Get-LatestTag {
+    $Headers = @{ "Accept" = "application/vnd.github.v3+json"; "User-Agent" = "agent-ledger-installer" }
+    foreach ($Endpoint in @(
+        "https://api.github.com/repos/$Repo/releases/latest",
+        "https://api.github.com/repos/$Repo/releases?per_page=10"
+    )) {
+        try {
+            $Response = Invoke-RestMethod -Uri $Endpoint -Headers $Headers -TimeoutSec 15 -ErrorAction Stop
+            if ($Response -is [array]) { $Candidates = $Response | ForEach-Object { $_.tag_name } }
+            else { $Candidates = @($Response.tag_name) }
+            foreach ($Candidate in $Candidates) {
+                if ($Candidate) {
+                    # Verify an asset actually exists before trusting this tag
+                    $ProbeName = "agent-ledger_${Candidate}_windows_amd64.zip"
+                    try {
+                        Invoke-WebRequest -Uri "https://github.com/$Repo/releases/download/$Candidate/$ProbeName" -Method Head -Headers @{ "User-Agent" = "agent-ledger-installer" } -TimeoutSec 15 -UseBasicParsing | Out-Null
+                        return $Candidate
+                    } catch { continue }
+                }
+            }
+        } catch { continue }
+    }
+    return $null
+}
+
+function Test-AssetExists {
+    param([string]$Tag, [string]$Archive)
+    try {
+        Invoke-WebRequest -Uri "https://github.com/$Repo/releases/download/$Tag/$Archive" -Method Head -Headers @{ "User-Agent" = "agent-ledger-installer" } -TimeoutSec 20 -UseBasicParsing | Out-Null
+        return $true
+    } catch {
+        return $false
+    }
+}
 
 # Detect Windows architecture
 $Arch = $env:PROCESSOR_ARCHITECTURE
@@ -32,19 +74,22 @@ if ($Version) {
     Write-Host "Installing requested version: $Tag"
 } else {
     Write-Host "Determining latest release for $Repo..."
-    $Tag = $null
-    try {
-        $ReleaseInfo = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -Headers @{"Accept" = "application/vnd.github.v3+json"} -ErrorAction Stop
-        if ($ReleaseInfo.tag_name) {
-            $Tag = $ReleaseInfo.tag_name
+    $Tag = Get-LatestTag
+
+    if (-not $Tag) {
+        foreach ($Fallback in $FallbackTags) {
+            Write-Host "Could not query GitHub API; trying known-good release $Fallback..."
+            $ArchiveName = "agent-ledger_${Fallback}_windows_${TargetArch}.zip"
+            if (Test-AssetExists -Tag $Fallback -Archive $ArchiveName) {
+                $Tag = $Fallback
+                break
+            }
         }
-    } catch {
-        # Fallback if API rate-limited
-        $Tag = "v0.2.1"
     }
 
     if (-not $Tag) {
-        $Tag = "v0.2.1"
+        Write-Error "Unable to determine an available release. Check https://github.com/$Repo/releases"
+        exit 1
     }
     Write-Host "Found latest version: $Tag"
 }
@@ -67,7 +112,17 @@ New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 try {
     $ZipPath = Join-Path $TempDir $ArchiveName
     Write-Host "Downloading $ArchiveName..."
-    Invoke-WebRequest -Uri $DownloadUrl -OutFile $ZipPath -UseBasicParsing
+    try {
+        Invoke-WebRequest -Uri $DownloadUrl -OutFile $ZipPath -UseBasicParsing -Headers @{ "User-Agent" = "agent-ledger-installer" } -ErrorAction Stop
+    } catch {
+        Write-Host ""
+        Write-Host "Download failed for $Tag ($($_.Exception.Message))." -ForegroundColor Yellow
+        Write-Host "Verify the release exists at: https://github.com/$Repo/releases"
+        if (-not $Version) {
+            Write-Host "Attempting fallback to a known-good release..."
+        }
+        exit 1
+    }
 
     Write-Host "Extracting binaries..."
     Expand-Archive -Path $ZipPath -DestinationPath $TempDir -Force
@@ -88,30 +143,36 @@ try {
     $InstalledAgentLedger = Join-Path $InstallDir "agent-ledger.exe"
     $InstalledLedgerMcp = Join-Path $InstallDir "ledger-mcp.exe"
 
-    if ((Test-Path $InstalledAgentLedger) -and (Test-Path $InstalledLedgerMcp)) {
-        Write-Host ""
-        Write-Host "Successfully installed Agent Ledger ($Tag)!" -ForegroundColor Green
-        Write-Host "  - CLI: $InstalledAgentLedger"
-        Write-Host "  - MCP: $InstalledLedgerMcp"
-        Write-Host ""
-    } else {
+    if (-not ((Test-Path $InstalledAgentLedger) -and (Test-Path $InstalledLedgerMcp))) {
         Write-Error "Installation verification failed in $InstallDir."
         exit 1
     }
 
-    # Check PATH
+    Write-Host ""
+    Write-Host "Successfully installed Agent Ledger ($Tag)!" -ForegroundColor Green
+    Write-Host "  - CLI: $InstalledAgentLedger"
+    Write-Host "  - MCP: $InstalledLedgerMcp"
+    Write-Host ""
+
+    # Ensure InstallDir is on the User PATH (persists across sessions)
     $UserPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
     if ($UserPath -notlike "*$InstallDir*") {
-        Write-Host "Notice: $InstallDir is not currently in your User PATH." -ForegroundColor Yellow
-        Write-Host "To add it automatically for your user account in PowerShell, run:"
+        Write-Host "Adding $InstallDir to your User PATH..."
+        $NewPath = if ($UserPath) { "$UserPath;$InstallDir" } else { $InstallDir }
+        [System.Environment]::SetEnvironmentVariable("Path", $NewPath, "User")
+    }
+
+    # Make commands available in the current session immediately
+    if (($env:Path -split ";") -notcontains $InstallDir) {
+        $env:Path = "$env:Path;$InstallDir"
+    }
+
+    Write-Host "Verification:"
+    Write-Host "  Run 'agent-ledger --help' to get started."
+    Write-Host "  Run 'ledger-mcp --help' to view MCP server details."
+    if ($Host.Name -eq "ConsoleHost") {
         Write-Host ""
-        Write-Host "  [System.Environment]::SetEnvironmentVariable('Path', `$env:Path + ';$InstallDir', 'User')"
-        Write-Host ""
-        Write-Host "Or add '$InstallDir' to your User Environment Variables in Windows Settings."
-    } else {
-        Write-Host "Verification:"
-        Write-Host "  Run 'agent-ledger --help' to get started."
-        Write-Host "  Run 'ledger-mcp --help' to view MCP server details."
+        Write-Host "Note: restart your terminal for PATH changes to apply in new sessions."
     }
 } finally {
     if (Test-Path $TempDir) {
