@@ -1,0 +1,6 @@
+# Normalize line endings
+* text=auto
+
+# POSIX shell scripts must stay LF even on Windows checkouts,
+# otherwise `sh`/`bash` fail parsing when tested locally.
+*.sh text eol=lf
