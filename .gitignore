@@ -1,4 +1,15 @@
-ledger
-ledger-mcp
+# Binaries (root directory only)
+/ledger
+/ledger.exe
+/ledger-mcp
+/ledger-mcp.exe
+
+# Agent Ledger data
 .agent/
+
+# OS-specific
 .DS_Store
+Thumbs.db
+
+# Config files (local only)
+mcp_config.json
