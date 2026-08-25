@@ -1,0 +1,203 @@
+{
+  "checkpoints": [
+    {
+      "id": "checkpoint-1",
+      "session_id": "50c07877-1095-4d19-b8c9-68aeb229dbfc",
+      "ref": "refs/agents/sessions/50c07877-1095-4d19-b8c9-68aeb229dbfc/checkpoint-1",
+      "commit": "213a903ed94740e84019c7e52f0646f1a0289067",
+      "tree": "b61b40cf2957d62154c6e276dc48e6b56dc10c80",
+      "timestamp": "2026-08-25T13:54:07.716334Z",
+      "parent_commit": "fd6acae566d962111ae1dfd87ba6f1f45b164f67",
+      "changed_files": [
+        "README.md"
+      ],
+      "added_files": [
+        ".agent/",
+        "cmd/",
+        "go.mod",
+        "go.sum",
+        "internal/",
+        "ledger",
+        "ledger-mcp",
+        "mcp/",
+        "test.txt"
+      ],
+      "deleted_files": [],
+      "modified_files": [
+        "README.md"
+      ],
+      "git_status": {
+        "branch": "main",
+        "head": "fd6acae566d962111ae1dfd87ba6f1f45b164f67",
+        "dirty": true,
+        "staged_files": [
+          "README.md"
+        ],
+        "unstaged_files": [
+          "README.md"
+        ],
+        "untracked_files": [
+          ".agent/",
+          "cmd/",
+          "go.mod",
+          "go.sum",
+          "internal/",
+          "ledger",
+          "ledger-mcp",
+          "mcp/",
+          "test.txt"
+        ]
+      }
+    },
+    {
+      "id": "checkpoint-2",
+      "session_id": "50c07877-1095-4d19-b8c9-68aeb229dbfc",
+      "ref": "refs/agents/sessions/50c07877-1095-4d19-b8c9-68aeb229dbfc/checkpoint-2",
+      "commit": "d8fc58f722806c8fbcfbcdc77a5bc7dffc6a2101",
+      "tree": "669013805a9622377e4bd68ba8cac303e982dc2c",
+      "timestamp": "2026-08-25T13:57:23.095859Z",
+      "parent_commit": "fd6acae566d962111ae1dfd87ba6f1f45b164f67",
+      "parent_checkpoint": "refs/agents/sessions/50c07877-1095-4d19-b8c9-68aeb229dbfc/checkpoint-1",
+      "changed_files": [
+        "README.md"
+      ],
+      "added_files": [
+        ".agent/",
+        "cmd/",
+        "go.mod",
+        "go.sum",
+        "internal/",
+        "ledger",
+        "ledger-mcp",
+        "mcp/",
+        "test.txt"
+      ],
+      "deleted_files": [],
+      "modified_files": [
+        "README.md"
+      ],
+      "git_status": {
+        "branch": "main",
+        "head": "fd6acae566d962111ae1dfd87ba6f1f45b164f67",
+        "dirty": true,
+        "staged_files": [
+          "README.md"
+        ],
+        "unstaged_files": [
+          "README.md"
+        ],
+        "untracked_files": [
+          ".agent/",
+          "cmd/",
+          "go.mod",
+          "go.sum",
+          "internal/",
+          "ledger",
+          "ledger-mcp",
+          "mcp/",
+          "test.txt"
+        ]
+      }
+    },
+    {
+      "id": "checkpoint-3",
+      "session_id": "50c07877-1095-4d19-b8c9-68aeb229dbfc",
+      "ref": "refs/agents/sessions/50c07877-1095-4d19-b8c9-68aeb229dbfc/checkpoint-3",
+      "commit": "60cd2321eed4c7e24291e082d2a06ad472290d79",
+      "tree": "89646fe73c32fb7eca5d1271e5bdf0e0f7738c99",
+      "timestamp": "2026-08-25T13:59:44.672929Z",
+      "parent_commit": "fd6acae566d962111ae1dfd87ba6f1f45b164f67",
+      "parent_checkpoint": "refs/agents/sessions/50c07877-1095-4d19-b8c9-68aeb229dbfc/checkpoint-2",
+      "changed_files": [
+        "README.md"
+      ],
+      "added_files": [
+        ".agent/",
+        "cmd/",
+        "go.mod",
+        "go.sum",
+        "internal/",
+        "ledger",
+        "ledger-mcp",
+        "mcp/",
+        "test.txt"
+      ],
+      "deleted_files": [],
+      "modified_files": [
+        "README.md"
+      ],
+      "git_status": {
+        "branch": "main",
+        "head": "fd6acae566d962111ae1dfd87ba6f1f45b164f67",
+        "dirty": true,
+        "staged_files": [
+          "README.md"
+        ],
+        "unstaged_files": [
+          "README.md"
+        ],
+        "untracked_files": [
+          ".agent/",
+          "cmd/",
+          "go.mod",
+          "go.sum",
+          "internal/",
+          "ledger",
+          "ledger-mcp",
+          "mcp/",
+          "test.txt"
+        ]
+      }
+    },
+    {
+      "id": "checkpoint-4",
+      "session_id": "50c07877-1095-4d19-b8c9-68aeb229dbfc",
+      "ref": "refs/agents/sessions/50c07877-1095-4d19-b8c9-68aeb229dbfc/checkpoint-4",
+      "commit": "5ce0d6dde173bc6a0b1f5019e46d1fd61cd0d4f4",
+      "tree": "f7c99c10c97bddba1e35fcd38ce26339fc54a5f0",
+      "timestamp": "2026-08-25T14:02:04.478955Z",
+      "parent_commit": "fd6acae566d962111ae1dfd87ba6f1f45b164f67",
+      "parent_checkpoint": "refs/agents/sessions/50c07877-1095-4d19-b8c9-68aeb229dbfc/checkpoint-3",
+      "changed_files": [
+        "README.md"
+      ],
+      "added_files": [
+        ".agent/",
+        "cmd/",
+        "go.mod",
+        "go.sum",
+        "internal/",
+        "ledger",
+        "ledger-mcp",
+        "mcp/",
+        "test.txt"
+      ],
+      "deleted_files": [],
+      "modified_files": [
+        "README.md"
+      ],
+      "git_status": {
+        "branch": "main",
+        "head": "fd6acae566d962111ae1dfd87ba6f1f45b164f67",
+        "dirty": true,
+        "staged_files": [
+          "README.md"
+        ],
+        "unstaged_files": [
+          "README.md"
+        ],
+        "untracked_files": [
+          ".agent/",
+          "cmd/",
+          "go.mod",
+          "go.sum",
+          "internal/",
+          "ledger",
+          "ledger-mcp",
+          "mcp/",
+          "test.txt"
+        ]
+      }
+    }
+  ]
+}

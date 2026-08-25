@@ -1,0 +1,149 @@
+{
+  "checkpoints": [
+    {
+      "id": "checkpoint-1",
+      "session_id": "4417de2f-d064-4f67-b491-9a71f20fa80b",
+      "ref": "refs/agents/sessions/4417de2f-d064-4f67-b491-9a71f20fa80b/checkpoint-1",
+      "commit": "ebd871afea22d59a04cdbb48384f84526a0364eb",
+      "tree": "42e99a72039f8659ba5604c71699923853f0d99d",
+      "timestamp": "2026-08-25T15:57:23.789555Z",
+      "parent_commit": "fd6acae566d962111ae1dfd87ba6f1f45b164f67",
+      "changed_files": [
+        "README.md"
+      ],
+      "added_files": [
+        ".agent/",
+        "cmd/",
+        "go.mod",
+        "go.sum",
+        "internal/",
+        "ledger",
+        "ledger-mcp",
+        "mcp/",
+        "test.txt"
+      ],
+      "deleted_files": [],
+      "modified_files": [
+        "README.md"
+      ],
+      "git_status": {
+        "branch": "main",
+        "head": "fd6acae566d962111ae1dfd87ba6f1f45b164f67",
+        "dirty": true,
+        "staged_files": [
+          "README.md"
+        ],
+        "unstaged_files": [
+          "README.md"
+        ],
+        "untracked_files": [
+          ".agent/",
+          "cmd/",
+          "go.mod",
+          "go.sum",
+          "internal/",
+          "ledger",
+          "ledger-mcp",
+          "mcp/",
+          "test.txt"
+        ]
+      }
+    },
+    {
+      "id": "checkpoint-2",
+      "session_id": "4417de2f-d064-4f67-b491-9a71f20fa80b",
+      "ref": "refs/agents/sessions/4417de2f-d064-4f67-b491-9a71f20fa80b/checkpoint-2",
+      "commit": "566bc26c5fb5074d12d3ad9ccb04e2834749cf00",
+      "tree": "8a13f5ad380aa056866b21f46dffa3b7ae3d9185",
+      "timestamp": "2026-08-25T16:02:34.539846Z",
+      "parent_commit": "fd6acae566d962111ae1dfd87ba6f1f45b164f67",
+      "parent_checkpoint": "refs/agents/sessions/4417de2f-d064-4f67-b491-9a71f20fa80b/checkpoint-1",
+      "changed_files": [
+        "README.md"
+      ],
+      "added_files": [
+        ".agent/",
+        "cmd/",
+        "go.mod",
+        "go.sum",
+        "internal/",
+        "ledger",
+        "ledger-mcp",
+        "mcp/",
+        "test.txt"
+      ],
+      "deleted_files": [],
+      "modified_files": [
+        "README.md"
+      ],
+      "git_status": {
+        "branch": "main",
+        "head": "fd6acae566d962111ae1dfd87ba6f1f45b164f67",
+        "dirty": true,
+        "staged_files": [
+          "README.md"
+        ],
+        "unstaged_files": [
+          "README.md"
+        ],
+        "untracked_files": [
+          ".agent/",
+          "cmd/",
+          "go.mod",
+          "go.sum",
+          "internal/",
+          "ledger",
+          "ledger-mcp",
+          "mcp/",
+          "test.txt"
+        ]
+      }
+    },
+    {
+      "id": "checkpoint-3",
+      "session_id": "4417de2f-d064-4f67-b491-9a71f20fa80b",
+      "ref": "refs/agents/sessions/4417de2f-d064-4f67-b491-9a71f20fa80b/checkpoint-3",
+      "commit": "62e1fc77a9d99a42721875fb1abb29f787b22f00",
+      "tree": "764ea7a6944d9c24288ba8a841194623b0a3dc61",
+      "timestamp": "2026-08-25T16:43:18.14982Z",
+      "parent_commit": "40630f6c1ec16f6889a79e53cd278ae9c8bde01d",
+      "parent_checkpoint": "refs/agents/sessions/4417de2f-d064-4f67-b491-9a71f20fa80b/checkpoint-2",
+      "changed_files": null,
+      "added_files": [
+        ".agent/",
+        ".github/",
+        ".goreleaser.yaml",
+        "install.ps1",
+        "install.sh"
+      ],
+      "deleted_files": [],
+      "modified_files": [
+        ".gitignore",
+        "README.md",
+        "internal/git/git.go",
+        "internal/repository/repository.go",
+        "internal/repository/repository_test.go"
+      ],
+      "git_status": {
+        "branch": "main",
+        "head": "40630f6c1ec16f6889a79e53cd278ae9c8bde01d",
+        "dirty": true,
+        "staged_files": null,
+        "unstaged_files": [
+          ".gitignore",
+          "README.md",
+          "internal/git/git.go",
+          "internal/repository/repository.go",
+          "internal/repository/repository_test.go"
+        ],
+        "untracked_files": [
+          ".agent/",
+          ".github/",
+          ".goreleaser.yaml",
+          "install.ps1",
+          "install.sh"
+        ]
+      }
+    }
+  ]
+}

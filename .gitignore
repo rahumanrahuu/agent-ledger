@@ -1,4 +1,13 @@
+# Build artifacts and binaries
 ledger
 ledger-mcp
-.agent/
+agent-ledger
+agent-ledger.exe
+ledger-mcp.exe
+dist/
+*.tar.gz
+*.zip
+
+# Operating system files
 .DS_Store
+Thumbs.db
