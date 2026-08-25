@@ -13,12 +13,12 @@ func Command(args ...string) (string, error) {
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	
+
 	err := cmd.Run()
 	if err != nil {
 		return "", fmt.Errorf("git %s failed: %w (stderr: %s)", strings.Join(args, " "), err, stderr.String())
 	}
-	
+
 	return stdout.String(), nil
 }
 
@@ -29,12 +29,12 @@ func CommandInDir(dir string, args ...string) (string, error) {
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	
+
 	err := cmd.Run()
 	if err != nil {
 		return "", fmt.Errorf("git %s failed in %s: %w (stderr: %s)", strings.Join(args, " "), dir, err, stderr.String())
 	}
-	
+
 	return stdout.String(), nil
 }
 
@@ -47,9 +47,27 @@ func IsRepository() (bool, error) {
 	return true, nil
 }
 
+// IsRepositoryInDir checks if the given directory is inside a git repository
+func IsRepositoryInDir(dir string) (bool, error) {
+	_, err := CommandInDir(dir, "rev-parse", "--is-inside-work-tree")
+	if err != nil {
+		return false, nil
+	}
+	return true, nil
+}
+
 // GetRepositoryRoot returns the root directory of the git repository
 func GetRepositoryRoot() (string, error) {
 	output, err := Command("rev-parse", "--show-toplevel")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(output), nil
+}
+
+// GetRepositoryRootInDir returns the root directory of the git repository containing dir
+func GetRepositoryRootInDir(dir string) (string, error) {
+	output, err := CommandInDir(dir, "rev-parse", "--show-toplevel")
 	if err != nil {
 		return "", err
 	}
@@ -80,7 +98,7 @@ func GetRemotes() (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	remotes := make(map[string]string)
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
@@ -96,7 +114,7 @@ func GetRemotes() (map[string]string, error) {
 			}
 		}
 	}
-	
+
 	return remotes, nil
 }
 
@@ -140,7 +158,7 @@ func CommitTree(message string, parent string, tree string) (string, error) {
 		args = append(args, "-p", parent)
 	}
 	args = append(args, tree)
-	
+
 	output, err := Command(args...)
 	if err != nil {
 		return "", err

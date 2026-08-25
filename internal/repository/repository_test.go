@@ -210,3 +210,42 @@ func TestDetect(t *testing.T) {
 		t.Errorf("Expected init.txt in Unstaged list, got %v", repo.Unstaged)
 	}
 }
+
+func TestFindRepositoryRoot(t *testing.T) {
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+	defer os.Chdir(originalDir)
+
+	repoDir := setupTestRepo(t)
+
+	// Test directly at root
+	if err := os.Chdir(repoDir); err != nil {
+		t.Fatalf("Failed to chdir: %v", err)
+	}
+	root, err := FindRepositoryRoot()
+	if err != nil {
+		t.Fatalf("FindRepositoryRoot failed at root: %v", err)
+	}
+	if !strings.HasSuffix(root, repoDir) && !strings.HasSuffix(repoDir, root) {
+		t.Errorf("Expected root %s to match %s", root, repoDir)
+	}
+
+	// Test from nested subdirectory
+	subDir := filepath.Join(repoDir, "deeply", "nested", "sub", "dir")
+	if err := os.MkdirAll(subDir, 0755); err != nil {
+		t.Fatalf("Failed to create nested dir: %v", err)
+	}
+	if err := os.Chdir(subDir); err != nil {
+		t.Fatalf("Failed to chdir to subdir: %v", err)
+	}
+
+	subRoot, err := FindRepositoryRoot()
+	if err != nil {
+		t.Fatalf("FindRepositoryRoot failed from subdir: %v", err)
+	}
+	if !strings.HasSuffix(subRoot, repoDir) && !strings.HasSuffix(repoDir, subRoot) {
+		t.Errorf("Expected root %s from subdir to match %s", subRoot, repoDir)
+	}
+}

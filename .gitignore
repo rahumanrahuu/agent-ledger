@@ -1,13 +1,18 @@
-# Binaries (root directory only)
+# Build artifacts and binaries (root directory only)
 /ledger
 /ledger.exe
 /ledger-mcp
 /ledger-mcp.exe
+agent-ledger
+agent-ledger.exe
+dist/
+*.tar.gz
+*.zip
 
 # Agent Ledger data
 .agent/
 
-# OS-specific
+# Operating system files
 .DS_Store
 Thumbs.db
 
