@@ -1,9 +1,0 @@
-{
-  "id": "4417de2f-d064-4f67-b491-9a71f20fa80b",
-  "agent": "Antigravity",
-  "model": "gemini-3.7-flash",
-  "repo_root": "/Users/rahuman/Desktop/agent-git-local",
-  "branch": "main",
-  "head": "fd6acae566d962111ae1dfd87ba6f1f45b164f67",
-  "start_time": "2026-08-25T15:55:04.973256Z"
-}
