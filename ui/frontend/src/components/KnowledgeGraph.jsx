@@ -1,47 +1,50 @@
-import { useState, useEffect } from 'react'
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react'
+import {FiCheck,FiChevronDown,FiCopy,FiCrosshair,FiEye,FiFilter,FiGrid,FiMaximize,FiMinus,FiMousePointer,FiPlus,FiRefreshCw,FiSearch,FiX} from 'react-icons/fi'
 import './KnowledgeGraph.css'
 
-function KnowledgeGraph({ onNodeClick }) {
-  const [graph, setGraph] = useState(null)
-  const [loading, setLoading] = useState(true)
+const TYPE_COLORS={session:'#6c8cff',decision:'#61d5a6',discovery:'#f0bd65',checkpoint:'#c082ff',failure:'#f06f6f'}
+const NODE_W=190,NODE_H=76
+const clamp=(v,min,max)=>Math.max(min,Math.min(max,v))
 
-  useEffect(() => {
-    const fetchGraph = async () => {
-      try {
-        const response = await fetch('/api/graph')
-        if (!response.ok) throw new Error('Failed to fetch graph')
-        const data = await response.json()
-        setGraph(data)
-      } catch (err) {
-        console.error('Failed to fetch graph:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchGraph()
-  }, [])
-
-  if (loading) {
-    return <div className="graph-container">Loading graph...</div>
-  }
-
-  if (!graph || !graph.nodes || graph.nodes.length === 0) {
-    return <div className="graph-container">No graph data available</div>
-  }
-
-  return (
-    <div className="graph-container">
-      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-secondary)' }}>
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: '14px', margin: '0 0 10px 0' }}>Knowledge Graph</p>
-          <p style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', margin: 0 }}>
-            Nodes: {graph.nodes?.length || 0} | Edges: {graph.edges?.length || 0}
-          </p>
-        </div>
-      </div>
-    </div>
-  )
+function makeLayout(nodes,mode){
+  if(mode==='radial') return nodes.map((n,i)=>{const ring=Math.floor(i/10),count=Math.min(10,nodes.length-ring*10),angle=(i%10)/Math.max(count,1)*Math.PI*2;return {...n,x:700+Math.cos(angle)*(220+ring*210),y:470+Math.sin(angle)*(180+ring*170)}})
+  if(mode==='hierarchical'){const groups={session:[],decision:[],discovery:[],checkpoint:[]};nodes.forEach(n=>(groups[n.type]||(groups[n.type]=[])).push(n));return Object.entries(groups).flatMap(([type,list],col)=>list.map((n,row)=>({...n,x:170+col*290,y:170+row*130})))}
+  if(mode==='force') return nodes.map((n,i)=>{const golden=i*2.39996,r=90+42*Math.sqrt(i);return {...n,x:700+Math.cos(golden)*r,y:470+Math.sin(golden)*r}})
+  const sessions=nodes.filter(n=>n.type==='session'),others=nodes.filter(n=>n.type!=='session');return [...sessions.map((n,i)=>({...n,x:150,y:220+i*150})),...others.map((n,i)=>({...n,x:490+(i%3)*265,y:130+Math.floor(i/3)*135}))]
 }
 
-export default KnowledgeGraph
+export default function KnowledgeGraph({onNodeClick,onNavigate,preview=false}){
+  const shellRef=useRef(null),searchRef=useRef(null),dragRef=useRef(null),spaceRef=useRef(false)
+  const[graph,setGraph]=useState(null),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[layoutMode,setLayoutMode]=useState('auto')
+  const[positions,setPositions]=useState({}),[view,setView]=useState({x:0,y:0,scale:1}),[selected,setSelected]=useState([]),[hidden,setHidden]=useState([])
+  const[filters,setFilters]=useState({session:true,decision:true,discovery:true,checkpoint:true}),[filterOpen,setFilterOpen]=useState(false),[context,setContext]=useState(null),[box,setBox]=useState(null)
+  const load=useCallback(()=>{setLoading(true);fetch('/api/graph').then(r=>{if(!r.ok)throw Error('Graph request failed');return r.json()}).then(data=>{setGraph(data);setHidden([])}).catch(()=>setGraph(null)).finally(()=>setLoading(false))},[])
+  useEffect(load,[load])
+  const rawNodes=graph?.nodes||[],rawEdges=graph?.edges||[]
+  useEffect(()=>{const laid=makeLayout(rawNodes,layoutMode);setPositions(Object.fromEntries(laid.map(n=>[n.id,{x:n.x,y:n.y}])));setSelected([])},[graph,layoutMode])
+  const visibleNodes=useMemo(()=>rawNodes.filter(n=>filters[n.type]!==false&&!hidden.includes(n.id)),[rawNodes,filters,hidden])
+  const visibleIds=useMemo(()=>new Set(visibleNodes.map(n=>n.id)),[visibleNodes])
+  const edges=useMemo(()=>rawEdges.filter(e=>visibleIds.has(e.source)&&visibleIds.has(e.target)),[rawEdges,visibleIds])
+  const connected=useMemo(()=>{const ids=new Set();edges.forEach(e=>{if(selected.includes(e.source))ids.add(e.target);if(selected.includes(e.target))ids.add(e.source)});return ids},[edges,selected])
+  const fit=useCallback(()=>{const el=shellRef.current;if(!el||!visibleNodes.length)return;const pts=visibleNodes.map(n=>positions[n.id]).filter(Boolean);if(!pts.length)return;const minX=Math.min(...pts.map(p=>p.x)),maxX=Math.max(...pts.map(p=>p.x+NODE_W)),minY=Math.min(...pts.map(p=>p.y)),maxY=Math.max(...pts.map(p=>p.y+NODE_H));const scale=clamp(Math.min((el.clientWidth-100)/(maxX-minX),(el.clientHeight-130)/(maxY-minY)),.35,1.25);setView({scale,x:(el.clientWidth-(minX+maxX)*scale)/2,y:(el.clientHeight-(minY+maxY)*scale)/2+20})},[visibleNodes,positions])
+  useEffect(()=>{if(!preview&&Object.keys(positions).length)requestAnimationFrame(fit)},[layoutMode,graph])
+  const focusNode=useCallback(node=>{const el=shellRef.current,p=positions[node.id];if(!el||!p)return;const scale=Math.max(view.scale,.9);setView({scale,x:el.clientWidth/2-(p.x+NODE_W/2)*scale,y:el.clientHeight/2-(p.y+NODE_H/2)*scale});setSelected([node.id]);const relations=edges.filter(e=>e.source===node.id||e.target===node.id).map(e=>({...e,node:rawNodes.find(n=>n.id===(e.source===node.id?e.target:e.source))}));onNodeClick?.({...node,connected:relations})},[positions,view.scale,edges,rawNodes,onNodeClick])
+  const chooseNode=(node,event)=>{event.stopPropagation();const multi=event.ctrlKey||event.metaKey||event.shiftKey;setSelected(prev=>multi?(prev.includes(node.id)?prev.filter(x=>x!==node.id):[...prev,node.id]):[node.id]);const relations=edges.filter(e=>e.source===node.id||e.target===node.id).map(e=>({...e,node:rawNodes.find(n=>n.id===(e.source===node.id?e.target:e.source))}));onNodeClick?.({...node,connected:relations})}
+  const openNode=node=>onNavigate?.({session:'sessions',decision:'decisions',discovery:'discoveries',checkpoint:'checkpoints'}[node.type]||'timeline',node)
+  const pointerDown=e=>{if(preview)return;setContext(null);const rect=shellRef.current.getBoundingClientRect();if(e.shiftKey){setBox({startX:e.clientX-rect.left,startY:e.clientY-rect.top,x:e.clientX-rect.left,y:e.clientY-rect.top});dragRef.current={kind:'box',rect};return}dragRef.current={kind:'pan',sx:e.clientX,sy:e.clientY,start:view};e.currentTarget.setPointerCapture?.(e.pointerId)}
+  const nodePointerDown=(e,node)=>{if(preview)return;e.stopPropagation();const ids=selected.includes(node.id)?selected:[node.id];setSelected(ids);dragRef.current={kind:'node',sx:e.clientX,sy:e.clientY,ids,start:Object.fromEntries(ids.map(id=>[id,{...positions[id]}]))};e.currentTarget.setPointerCapture?.(e.pointerId)}
+  const pointerMove=e=>{const d=dragRef.current;if(!d)return;if(d.kind==='pan')setView({...d.start,x:d.start.x+e.clientX-d.sx,y:d.start.y+e.clientY-d.sy});if(d.kind==='node'){const dx=(e.clientX-d.sx)/view.scale,dy=(e.clientY-d.sy)/view.scale;setPositions(p=>({...p,...Object.fromEntries(d.ids.map(id=>[id,{x:d.start[id].x+dx,y:d.start[id].y+dy}]))}))}if(d.kind==='box'){const x=e.clientX-d.rect.left,y=e.clientY-d.rect.top;setBox(b=>({...b,x,y}))}}
+  const pointerUp=()=>{if(dragRef.current?.kind==='box'&&box){const l=Math.min(box.startX,box.x),r=Math.max(box.startX,box.x),t=Math.min(box.startY,box.y),b=Math.max(box.startY,box.y);setSelected(visibleNodes.filter(n=>{const p=positions[n.id],x=p.x*view.scale+view.x,y=p.y*view.scale+view.y;return x+NODE_W*view.scale>l&&x<r&&y+NODE_H*view.scale>t&&y<b}).map(n=>n.id));setBox(null)}dragRef.current=null}
+  const wheel=e=>{if(preview)return;e.preventDefault();const rect=shellRef.current.getBoundingClientRect(),mx=e.clientX-rect.left,my=e.clientY-rect.top,next=clamp(view.scale*Math.exp(-e.deltaY*.001),.3,2);setView(v=>({scale:next,x:mx-(mx-v.x)*(next/v.scale),y:my-(my-v.y)*(next/v.scale)}))}
+  useEffect(()=>{const el=shellRef.current;if(!el)return;el.addEventListener('wheel',wheel,{passive:false});return()=>el.removeEventListener('wheel',wheel)},[view,preview])
+  useEffect(()=>{if(preview)return;const down=e=>{if(e.target.matches('input,select,textarea'))return;if(e.code==='Space'){spaceRef.current=true;e.preventDefault()}if((e.ctrlKey||e.metaKey)&&e.key==='f'){e.preventDefault();searchRef.current?.focus()}if(e.key==='+'||e.key==='=')setView(v=>({...v,scale:clamp(v.scale+.12,.3,2)}));if(e.key==='-')setView(v=>({...v,scale:clamp(v.scale-.12,.3,2)}));if(e.key.toLowerCase()==='f')fit();if(e.key==='Escape'){setSelected([]);setContext(null)}if(e.key==='Delete')setHidden(h=>[...new Set([...h,...selected])])};const up=e=>{if(e.code==='Space')spaceRef.current=false};window.addEventListener('keydown',down);window.addEventListener('keyup',up);return()=>{window.removeEventListener('keydown',down);window.removeEventListener('keyup',up)}},[fit,preview,selected])
+  const firstMatch=visibleNodes.find(n=>`${n.label} ${n.id} ${n.type}`.toLowerCase().includes(query.toLowerCase()))
+  if(loading)return <div className={`graph-shell ${preview?'preview':''}`}><div className="graph-empty"><span className="map-loader"/>Mapping knowledge…</div></div>
+  return <div ref={shellRef} className={`graph-shell ${preview?'preview':''}`} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onClick={()=>{setSelected([]);setContext(null)}}>
+    <div className="graph-toolbar"><div className="map-title"><span className="graph-pulse"/><div><strong>Knowledge Map</strong><small>Agent Ledger / Knowledge · {visibleNodes.length} nodes · {edges.length} links</small></div></div>{!preview&&<div className="graph-actions"><label className="graph-search"><FiSearch/><input ref={searchRef} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&firstMatch&&focusNode(firstMatch)} placeholder="Search knowledge…"/>{query&&<button onClick={()=>setQuery('')}><FiX/></button>}</label><div className="menu-wrap"><button className={filterOpen?'active':''} onClick={e=>{e.stopPropagation();setFilterOpen(!filterOpen)}}><FiFilter/><span>Filter</span><FiChevronDown/></button>{filterOpen&&<div className="filter-menu" onClick={e=>e.stopPropagation()}>{Object.keys(filters).map(type=><button key={type} onClick={()=>setFilters(f=>({...f,[type]:!f[type]}))}><span style={{background:TYPE_COLORS[type]}}/>{type}<i>{filters[type]&&<FiCheck/>}</i></button>)}</div>}</div><label className="layout-select"><FiGrid/><select value={layoutMode} onChange={e=>setLayoutMode(e.target.value)}><option value="auto">Auto layout</option><option value="hierarchical">Hierarchical</option><option value="force">Force directed</option><option value="radial">Radial</option></select></label><button title="Refresh graph" onClick={load}><FiRefreshCw/></button></div>}</div>
+    {!rawNodes.length?<div className="graph-empty rich"><FiMousePointer/><strong>Your knowledge map is ready</strong><p>Sessions, decisions, discoveries and checkpoints will appear here as they become connected.</p><button onClick={load}><FiRefreshCw/> Refresh</button></div>:<div className="graph-world" style={{transform:`translate(${view.x}px,${view.y}px) scale(${view.scale})`}}><svg className="edge-layer" width="1600" height="1200">{edges.map((e,i)=>{const a=positions[e.source],b=positions[e.target];if(!a||!b)return null;const active=selected.includes(e.source)||selected.includes(e.target);return <g key={`${e.source}-${e.target}-${i}`} className={`edge ${active?'active':''}`}><path d={`M${a.x+NODE_W},${a.y+NODE_H/2} C${(a.x+b.x+NODE_W)/2},${a.y+NODE_H/2} ${(a.x+b.x+NODE_W)/2},${b.y+NODE_H/2} ${b.x},${b.y+NODE_H/2}`}/><circle cx={b.x} cy={b.y+NODE_H/2} r="2.5"/><title>{e.type}</title></g>})}</svg>{visibleNodes.map(node=>{const p=positions[node.id]||{x:0,y:0},match=!query||`${node.label} ${node.id} ${node.type}`.toLowerCase().includes(query.toLowerCase()),isSelected=selected.includes(node.id),isConnected=connected.has(node.id);return <article key={node.id} className={`map-node type-${node.type} ${isSelected?'selected':''} ${isConnected?'connected':''} ${match?'':'dimmed'}`} style={{left:p.x,top:p.y,'--type-color':TYPE_COLORS[node.type]||'#9c7cff'}} onPointerDown={e=>nodePointerDown(e,node)} onClick={e=>chooseNode(node,e)} onDoubleClick={()=>openNode(node)} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setContext({x:e.clientX,y:e.clientY,node});setSelected([node.id])}}><header><span/><label>{node.type}</label><i>{edges.filter(e=>e.source===node.id||e.target===node.id).length}</i></header><h3>{node.label||node.id}</h3><footer><code>{String(node.id).slice(0,18)}</code><FiCrosshair/></footer><b className="port in"/><b className="port out"/></article>})}</div>}
+    {box&&<div className="selection-box" style={{left:Math.min(box.startX,box.x),top:Math.min(box.startY,box.y),width:Math.abs(box.x-box.startX),height:Math.abs(box.y-box.startY)}}/>}
+    {!preview&&<><div className="floating-controls"><button title="Zoom in" onClick={()=>setView(v=>({...v,scale:clamp(v.scale+.15,.3,2)}))}><FiPlus/></button><button title="Zoom out" onClick={()=>setView(v=>({...v,scale:clamp(v.scale-.15,.3,2)}))}><FiMinus/></button><button title="Fit graph" onClick={fit}><FiMaximize/></button><button title="Reset view" onClick={()=>setView({x:0,y:0,scale:1})}><FiCrosshair/></button></div><div className="canvas-hint">Drag to pan · Scroll to zoom · Shift-drag to select · Double-click to open</div></>}
+    {context&&<div className="node-context" style={{left:context.x,top:context.y}} onClick={e=>e.stopPropagation()}><strong>{context.node.label}</strong><button onClick={()=>openNode(context.node)}><FiEye/> Open entity</button><button onClick={()=>{focusNode(context.node);setContext(null)}}><FiCrosshair/> Focus node</button><button onClick={()=>{onNodeClick?.(context.node);setContext(null)}}><FiMousePointer/> Inspect</button><button onClick={()=>navigator.clipboard?.writeText(context.node.id)}><FiCopy/> Copy ID</button><button onClick={()=>{setHidden(h=>[...h,context.node.id]);setContext(null)}}><FiX/> Hide from map</button></div>}
+  </div>
+}

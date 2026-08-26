@@ -9,6 +9,7 @@ import Discoveries from './views/Discoveries'
 import Checkpoints from './views/Checkpoints'
 import KnowledgeGraph from './components/KnowledgeGraph'
 import Inspector from './components/Inspector'
+import ProjectView from './views/ProjectView'
 
 function App() {
   const [currentView, setCurrentView] = useState('overview')
@@ -36,7 +37,7 @@ function App() {
   const renderView = () => {
     switch (currentView) {
       case 'overview':
-        return <Overview data={overview} onSelect={setSelectedItem} />
+        return <Overview data={overview} onSelect={setSelectedItem} onNavigate={setCurrentView} />
       case 'sessions':
         return <Sessions onSelect={setSelectedItem} />
       case 'timeline':
@@ -48,7 +49,14 @@ function App() {
       case 'checkpoints':
         return <Checkpoints onSelect={setSelectedItem} />
       case 'knowledge-graph':
-        return <KnowledgeGraph onNodeClick={setSelectedItem} />
+        return <KnowledgeGraph onNodeClick={setSelectedItem} onNavigate={(view, node) => {
+          setCurrentView(view)
+          setSelectedItem({ type: node.type, ...node })
+        }} />
+      case 'files':
+        return <ProjectView kind="files" data={overview} onSelect={setSelectedItem} />
+      case 'metadata':
+        return <ProjectView kind="metadata" data={overview} onSelect={setSelectedItem} />
       default:
         return <Overview data={overview} onSelect={setSelectedItem} />
     }

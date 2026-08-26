@@ -54,6 +54,14 @@ function Inspector({ item, onClose }) {
             </div>
           </div>
         )}
+        {item.value !== undefined && (
+          <div className="inspector-section"><h3 className="section-header">Value</h3><div className="inspector-value">{String(item.value)}</div></div>
+        )}
+        {item.connected?.length > 0 && (
+          <div className="inspector-section"><h3 className="section-header">Connected</h3><div className="relationship-list">
+            {item.connected.map((relationship, index) => <div className="relationship" key={`${relationship.source}-${relationship.target}-${index}`}><span className={`relationship-${relationship.node?.type || 'other'}`} /><div><strong>{relationship.node?.label || relationship.node?.id}</strong><small>{relationship.type || 'related to'} · {relationship.node?.type}</small></div></div>)}
+          </div></div>
+        )}
       </div>
     </aside>
   )
