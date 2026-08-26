@@ -44,16 +44,16 @@ func NewAPI(repo *repository.Repository, st *storage.Storage, version string) *A
 
 // OverviewResponse contains project overview data
 type OverviewResponse struct {
-	ProjectName       string     `json:"project_name"`
-	RepositoryRoot    string     `json:"repository_root"`
-	CurrentBranch     string     `json:"current_branch"`
-	CurrentCommit     string     `json:"current_commit"`
-	Version           string     `json:"version"`
-	SessionCount      int        `json:"session_count"`
-	DecisionCount     int        `json:"decision_count"`
-	DiscoveryCount    int        `json:"discovery_count"`
-	CheckpointCount   int        `json:"checkpoint_count"`
-	LastActivityTime  *time.Time `json:"last_activity_time,omitempty"`
+	ProjectName      string     `json:"project_name"`
+	RepositoryRoot   string     `json:"repository_root"`
+	CurrentBranch    string     `json:"current_branch"`
+	CurrentCommit    string     `json:"current_commit"`
+	Version          string     `json:"version"`
+	SessionCount     int        `json:"session_count"`
+	DecisionCount    int        `json:"decision_count"`
+	DiscoveryCount   int        `json:"discovery_count"`
+	CheckpointCount  int        `json:"checkpoint_count"`
+	LastActivityTime *time.Time `json:"last_activity_time,omitempty"`
 }
 
 // GetOverview returns project overview data
@@ -65,7 +65,7 @@ func (a *API) GetOverview() (*OverviewResponse, error) {
 
 	decisions, _ := a.storage.ListFiles("decisions")
 	discoveries, _ := a.storage.ListFiles("discoveries")
-	checkpoints, _ := a.storage.ListFiles("checkpoints")
+	checkpoints := a.getAllCheckpoints(sessions)
 
 	projectName := "Agent Ledger Project"
 	if content, err := a.storage.ReadMarkdown("project.md"); err == nil && len(content) > 0 {
@@ -141,13 +141,13 @@ func (a *API) GetSessions() (*SessionListResponse, error) {
 
 // SessionDetailResponse contains detailed session information
 type SessionDetailResponse struct {
-	Session      *SessionInfo `json:"session"`
-	Checkpoints  int          `json:"checkpoint_count"`
-	Decisions    int          `json:"decision_count"`
-	Discoveries  int          `json:"discovery_count"`
-	Failures     int          `json:"failure_count"`
-	Constraints  int          `json:"constraint_count"`
-	HasHandoff   bool         `json:"has_handoff"`
+	Session     *SessionInfo `json:"session"`
+	Checkpoints int          `json:"checkpoint_count"`
+	Decisions   int          `json:"decision_count"`
+	Discoveries int          `json:"discovery_count"`
+	Failures    int          `json:"failure_count"`
+	Constraints int          `json:"constraint_count"`
+	HasHandoff  bool         `json:"has_handoff"`
 }
 
 // GetSessionDetail returns detailed information about a specific session
@@ -216,6 +216,23 @@ type EventListResponse struct {
 // GetEvents returns all events in chronological order
 func (a *API) GetEvents(filterType string) (*EventListResponse, error) {
 	var events []*EventItem
+
+	// Checkpoints are Git-native session artifacts stored in each session's
+	// checkpoints.json, rather than Markdown files in a top-level directory.
+	if filterType == "" || filterType == "checkpoint" {
+		sessions, _ := a.historyMgr.GetAllSessions("", "")
+		for _, cp := range a.getAllCheckpoints(sessions) {
+			changed := len(cp.ChangedFiles) + len(cp.AddedFiles) + len(cp.DeletedFiles) + len(cp.ModifiedFiles)
+			events = append(events, &EventItem{
+				ID:        cp.ID,
+				Type:      "checkpoint",
+				Title:     cp.ID,
+				Content:   fmt.Sprintf("Git checkpoint for session %s at commit %s. Captured %d changed files.", cp.SessionID, cp.Commit, changed),
+				Timestamp: cp.Timestamp,
+				Path:      fmt.Sprintf("sessions/%s/checkpoints.json", cp.SessionID),
+			})
+		}
+	}
 
 	// Get decisions
 	if filterType == "" || filterType == "decision" {
@@ -383,21 +400,19 @@ func (a *API) GetGraph() (*GraphResponse, error) {
 		}
 	}
 
-	// Get checkpoints
-	checkpoints, _ := a.storage.ListFiles("checkpoints")
-	for _, file := range checkpoints {
-		id := extractIDFromFilename(file)
-		title := strings.TrimSuffix(file, ".md")
+	// Get Git-native checkpoints and connect each one to its owning session.
+	for _, cp := range a.getAllCheckpoints(sessions) {
 		nodes = append(nodes, &Node{
-			ID:    id,
-			Label: title,
+			ID:    cp.ID,
+			Label: cp.ID,
 			Type:  "checkpoint",
+			Data:  cp,
 		})
-		if len(sessions) > 0 {
+		if cp.SessionID != "" {
 			edges = append(edges, &Edge{
-				Source: sessions[0].ID,
-				Target: id,
-				Type:   "contains",
+				Source: cp.SessionID,
+				Target: cp.ID,
+				Type:   "checkpoint_of",
 			})
 		}
 	}
@@ -406,6 +421,19 @@ func (a *API) GetGraph() (*GraphResponse, error) {
 		Nodes: nodes,
 		Edges: edges,
 	}, nil
+}
+
+// getAllCheckpoints reads checkpoint metadata through the checkpoint manager,
+// which is the canonical store used by the CLI and MCP server.
+func (a *API) getAllCheckpoints(sessions []*session.Session) []checkpoint.Checkpoint {
+	checkpoints := make([]checkpoint.Checkpoint, 0)
+	for _, sess := range sessions {
+		sessionCheckpoints, err := a.checkpointMgr.List(sess.ID)
+		if err == nil {
+			checkpoints = append(checkpoints, sessionCheckpoints...)
+		}
+	}
+	return checkpoints
 }
 
 // SearchResponse contains search results
