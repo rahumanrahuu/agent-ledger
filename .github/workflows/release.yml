@@ -26,6 +26,17 @@ jobs:
       - name: Run test suite
         run: go test -v ./...
 
+      - name: Verify tag is on main
+        run: |
+          git fetch origin main
+          MAIN_SHA=$(git rev-parse origin/main)
+          TAG_SHA=$(git rev-parse HEAD)
+          if [ "$MAIN_SHA" != "$TAG_SHA" ]; then
+            echo "Error: Tag $GITHUB_REF_NAME does not point to origin/main."
+            echo "Releases must be built from the main branch."
+            exit 1
+          fi
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:

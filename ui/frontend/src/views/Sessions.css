@@ -1,0 +1,120 @@
+.view-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-10);
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.view-header {
+  margin-bottom: var(--spacing-8);
+  padding-bottom: var(--spacing-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.view-header h1 {
+  margin-bottom: var(--spacing-2);
+}
+
+.view-header p {
+  font-size: var(--font-size-lg);
+  margin: 0;
+}
+
+.sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.session-card {
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.session-card:hover {
+  border-color: var(--color-blue);
+  box-shadow: var(--shadow-md);
+}
+
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-3);
+  gap: var(--spacing-4);
+}
+
+.session-name {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.session-status {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--radius-md);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.session-status.active {
+  background-color: var(--color-green-light);
+  color: var(--color-green);
+}
+
+.session-status.ended {
+  background-color: var(--color-gray-light);
+  color: var(--color-gray);
+}
+
+.session-meta {
+  display: flex;
+  gap: var(--spacing-6);
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+}
+
+.meta-item {
+  display: flex;
+  gap: var(--spacing-2);
+  align-items: center;
+}
+
+.meta-label {
+  font-weight: var(--font-weight-medium);
+}
+
+.meta-value {
+  color: var(--color-text-primary);
+}
+
+.font-mono {
+  font-family: var(--font-family-mono);
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--spacing-10);
+  color: var(--color-text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .view-container {
+    padding: var(--spacing-4);
+  }
+
+  .session-meta {
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+}

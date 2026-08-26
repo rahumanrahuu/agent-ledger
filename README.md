@@ -48,12 +48,12 @@ No `sudo` or Administrator privileges are required.
 
 **Unix:**
 ```bash
-VERSION=v0.2.1 curl -fsSL https://raw.githubusercontent.com/rahumanrahuu/agent-ledger/main/install.sh | sh
+VERSION=v0.2.2 curl -fsSL https://raw.githubusercontent.com/rahumanrahuu/agent-ledger/main/install.sh | sh
 ```
 
 **Windows PowerShell:**
 ```powershell
-$env:VERSION="v0.2.1"; irm https://raw.githubusercontent.com/rahumanrahuu/agent-ledger/main/install.ps1 | iex
+$env:VERSION="v0.2.2"; irm https://raw.githubusercontent.com/rahumanrahuu/agent-ledger/main/install.ps1 | iex
 ```
 
 ### Verify installation
@@ -357,12 +357,12 @@ https://github.com/rahumanrahuu/agent-ledger/releases
 Each release contains archives for all supported platforms:
 
 ```
-agent-ledger_v0.2.1_darwin_arm64.tar.gz
-agent-ledger_v0.2.1_darwin_amd64.tar.gz
-agent-ledger_v0.2.1_linux_arm64.tar.gz
-agent-ledger_v0.2.1_linux_amd64.tar.gz
-agent-ledger_v0.2.1_windows_arm64.zip
-agent-ledger_v0.2.1_windows_amd64.zip
+agent-ledger_v0.2.2_darwin_arm64.tar.gz
+agent-ledger_v0.2.2_darwin_amd64.tar.gz
+agent-ledger_v0.2.2_linux_arm64.tar.gz
+agent-ledger_v0.2.2_linux_amd64.tar.gz
+agent-ledger_v0.2.2_windows_arm64.zip
+agent-ledger_v0.2.2_windows_amd64.zip
 checksums.txt
 ```
 
@@ -373,8 +373,8 @@ Each archive contains `agent-ledger` and `ledger-mcp` (with `.exe` on Windows).
 Releases are built automatically by GitHub Actions when a version tag is pushed:
 
 ```bash
-git tag v0.2.1
-git push origin v0.2.1
+git tag v0.2.2
+git push origin v0.2.2
 ```
 
 The workflow runs `go test ./...`, then builds and packages binaries for all platforms using GoReleaser.
@@ -418,6 +418,18 @@ agent-ledger/
 ├── install.ps1              # Windows installer (PowerShell)
 └── .agent/                  # Agent Ledger's own ledger (gitignored in this repo)
 ```
+
+---
+
+## Development Workflow
+
+Agent Ledger follows a simple branch-based workflow:
+
+1. **Development**: All normal development happens on the `dev` branch.
+2. **Commit and Push**: Commit your changes and push them to `dev`.
+3. **Merge**: Once tested and stable, merge the `dev` branch into the `main` branch.
+4. **Release**: Create a version tag (e.g., `v0.3.0`) on the `main` branch.
+5. **Publish**: The GitHub Actions release workflow will automatically build and publish the release. Tags created from `dev` or any other branch will fail the release verification.
 
 ---
 
