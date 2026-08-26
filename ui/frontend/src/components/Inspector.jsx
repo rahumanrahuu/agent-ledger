@@ -1,75 +1,56 @@
-import { FiX } from 'react-icons/fi'
 import './Inspector.css'
 
-function Inspector({ data, onClose }) {
-  if (!data) return null
+function Inspector({ item, onClose }) {
+  if (!item) return null
 
   return (
     <aside className="inspector">
       <div className="inspector-header">
-        <h2>Details</h2>
-        <button className="close-button" onClick={onClose} title="Close Inspector">
-          <FiX />
-        </button>
+        <h2>Inspector</h2>
+        <button className="inspector-close" onClick={onClose}>✕</button>
       </div>
 
       <div className="inspector-content">
-        {data.type === 'session' && (
+        <div className="inspector-section">
+          <h3 className="section-header">Type</h3>
+          <div className="inspector-value">{item.type}</div>
+        </div>
+
+        {item.title && (
           <div className="inspector-section">
-            <h3>{data.agent || 'Session'}</h3>
-            <div className="property-list">
-              <div className="property">
-                <span className="property-label">ID</span>
-                <span className="property-value font-mono">{data.id}</span>
-              </div>
-              <div className="property">
-                <span className="property-label">Branch</span>
-                <span className="property-value">{data.branch}</span>
-              </div>
-              <div className="property">
-                <span className="property-label">Head</span>
-                <span className="property-value font-mono">{data.head?.substring(0, 7)}</span>
-              </div>
-              <div className="property">
-                <span className="property-label">Started</span>
-                <span className="property-value">
-                  {new Date(data.startTime).toLocaleString()}
-                </span>
-              </div>
-              {data.endTime && (
-                <div className="property">
-                  <span className="property-label">Ended</span>
-                  <span className="property-value">
-                    {new Date(data.endTime).toLocaleString()}
-                  </span>
-                </div>
-              )}
+            <h3 className="section-header">Title</h3>
+            <div className="inspector-value">{item.title}</div>
+          </div>
+        )}
+
+        {item.id && (
+          <div className="inspector-section">
+            <h3 className="section-header">ID</h3>
+            <code className="inspector-code">{item.id}</code>
+          </div>
+        )}
+
+        {item.timestamp && (
+          <div className="inspector-section">
+            <h3 className="section-header">Timestamp</h3>
+            <div className="inspector-value">
+              {new Date(item.timestamp).toLocaleString()}
             </div>
           </div>
         )}
 
-        {data.type === 'decision' && (
+        {item.path && (
           <div className="inspector-section">
-            <h3>{data.title}</h3>
-            <div className="property-list">
-              <div className="property">
-                <span className="property-label">Type</span>
-                <span className="property-value">Decision</span>
-              </div>
-              <div className="property full-width">
-                <span className="property-label">Content</span>
-                <p className="property-value">{data.content}</p>
-              </div>
-            </div>
+            <h3 className="section-header">Path</h3>
+            <code className="inspector-code">{item.path}</code>
           </div>
         )}
 
-        {!data.type && (
+        {item.content && (
           <div className="inspector-section">
-            <div className="property-list">
-              <div className="property full-width">
-                <pre>{JSON.stringify(data, null, 2)}</pre>
-              </div>
+            <h3 className="section-header">Content</h3>
+            <div className="inspector-markdown">
+              {item.content.substring(0, 300)}...
             </div>
           </div>
         )}

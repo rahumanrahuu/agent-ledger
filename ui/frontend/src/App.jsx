@@ -3,21 +3,18 @@ import './App.css'
 import Sidebar from './components/Sidebar'
 import Overview from './views/Overview'
 import Sessions from './views/Sessions'
+import Timeline from './views/Timeline'
 import Decisions from './views/Decisions'
 import Discoveries from './views/Discoveries'
 import Checkpoints from './views/Checkpoints'
-import Timeline from './views/Timeline'
+import KnowledgeGraph from './components/KnowledgeGraph'
 import Inspector from './components/Inspector'
-import Search from './components/Search'
 
 function App() {
   const [currentView, setCurrentView] = useState('overview')
-  const [inspectorOpen, setInspectorOpen] = useState(false)
-  const [inspectorData, setInspectorData] = useState(null)
+  const [selectedItem, setSelectedItem] = useState(null)
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [searchOpen, setSearchOpen] = useState(false)
 
   useEffect(() => {
     const fetchOverview = async () => {
@@ -27,7 +24,7 @@ function App() {
         const data = await response.json()
         setOverview(data)
       } catch (err) {
-        setError(err.message)
+        console.error('Failed to load overview:', err)
       } finally {
         setLoading(false)
       }
@@ -36,76 +33,47 @@ function App() {
     fetchOverview()
   }, [])
 
-  // Handle keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Cmd+K or Ctrl+K for search
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setSearchOpen(!searchOpen)
-      }
-      // Escape to close search
-      if (e.key === 'Escape' && searchOpen) {
-        setSearchOpen(false)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [searchOpen])
-
-  const handleSelectItem = (data) => {
-    setInspectorData(data)
-    setInspectorOpen(true)
-  }
-
   const renderView = () => {
     switch (currentView) {
       case 'overview':
-        return <Overview data={overview} onSelect={handleSelectItem} />
+        return <Overview data={overview} onSelect={setSelectedItem} />
       case 'sessions':
-        return <Sessions onSelect={handleSelectItem} />
-      case 'decisions':
-        return <Decisions onSelect={handleSelectItem} />
-      case 'discoveries':
-        return <Discoveries onSelect={handleSelectItem} />
-      case 'checkpoints':
-        return <Checkpoints onSelect={handleSelectItem} />
+        return <Sessions onSelect={setSelectedItem} />
       case 'timeline':
-        return <Timeline onSelect={handleSelectItem} />
+        return <Timeline onSelect={setSelectedItem} />
+      case 'decisions':
+        return <Decisions onSelect={setSelectedItem} />
+      case 'discoveries':
+        return <Discoveries onSelect={setSelectedItem} />
+      case 'checkpoints':
+        return <Checkpoints onSelect={setSelectedItem} />
+      case 'knowledge-graph':
+        return <KnowledgeGraph onNodeClick={setSelectedItem} />
       default:
-        return <Overview data={overview} onSelect={handleSelectItem} />
+        return <Overview data={overview} onSelect={setSelectedItem} />
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="app">
+        <div className="loading">Loading Agent Ledger...</div>
+      </div>
+    )
   }
 
   return (
     <div className="app">
-      <Sidebar
-        currentView={currentView}
-        onViewChange={setCurrentView}
-        onSearchClick={() => setSearchOpen(true)}
-      />
-      <main className="main-content">
-        {loading ? (
-          <div className="loading-state">Loading...</div>
-        ) : error ? (
-          <div className="error-state">Error: {error}</div>
-        ) : (
-          renderView()
+      <Sidebar currentView={currentView} onViewChange={setCurrentView} />
+      <main className="main-area">
+        <div className="center-column">{renderView()}</div>
+        {selectedItem && (
+          <Inspector
+            item={selectedItem}
+            onClose={() => setSelectedItem(null)}
+          />
         )}
       </main>
-      {inspectorOpen && (
-        <Inspector
-          data={inspectorData}
-          onClose={() => setInspectorOpen(false)}
-        />
-      )}
-      {searchOpen && (
-        <Search
-          onSelect={handleSelectItem}
-          onClose={() => setSearchOpen(false)}
-        />
-      )}
     </div>
   )
 }

@@ -1,75 +1,98 @@
 import { useState, useEffect } from 'react'
-import {
-  FiBookOpen,
-  FiSearch,
-  FiGrid,
-  FiTerminal,
-  FiCheckSquare,
-  FiCompass,
-  FiBookmark,
-  FiClock,
-} from 'react-icons/fi'
 import './Sidebar.css'
 
-function Sidebar({ currentView, onViewChange, onSearchClick }) {
-  const [isMac, setIsMac] = useState(false)
+function Sidebar({ currentView, onViewChange }) {
+  const [repoStatus, setRepoStatus] = useState(null)
 
   useEffect(() => {
-    setIsMac(
-      typeof navigator !== 'undefined' &&
-        (navigator.platform?.toUpperCase().indexOf('MAC') >= 0 ||
-          navigator.userAgent?.includes('Mac'))
-    )
+    const fetchRepoStatus = async () => {
+      try {
+        const response = await fetch('/api/overview')
+        if (response.ok) {
+          const data = await response.json()
+          setRepoStatus(data)
+        }
+      } catch (err) {
+        console.error('Failed to fetch repo status:', err)
+      }
+    }
+
+    fetchRepoStatus()
   }, [])
 
   const navItems = [
-    { id: 'overview', label: 'Overview', icon: <FiGrid /> },
-    { id: 'sessions', label: 'Sessions', icon: <FiTerminal /> },
-    { id: 'decisions', label: 'Decisions', icon: <FiCheckSquare /> },
-    { id: 'discoveries', label: 'Discoveries', icon: <FiCompass /> },
-    { id: 'checkpoints', label: 'Checkpoints', icon: <FiBookmark /> },
-    { id: 'timeline', label: 'Timeline', icon: <FiClock /> },
+    { section: 'AGENT', items: [{ id: 'overview', label: 'Overview' }] },
+    {
+      section: 'HISTORY',
+      items: [
+        { id: 'sessions', label: 'Sessions' },
+        { id: 'timeline', label: 'Timeline' },
+      ],
+    },
+    {
+      section: 'KNOWLEDGE',
+      items: [
+        { id: 'decisions', label: 'Decisions' },
+        { id: 'discoveries', label: 'Discoveries' },
+        { id: 'checkpoints', label: 'Checkpoints' },
+        { id: 'knowledge-graph', label: 'Knowledge Graph' },
+      ],
+    },
+    {
+      section: 'PROJECT',
+      items: [
+        { id: 'files', label: 'Files' },
+        { id: 'metadata', label: 'Metadata' },
+      ],
+    },
   ]
 
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <div className="app-icon">
-          <FiBookOpen />
+        <div className="app-title">
+          <span className="app-icon">◦</span>
+          <span className="app-name">Agent Ledger</span>
         </div>
-        <h1>Agent Ledger</h1>
+        {repoStatus && (
+          <div className="repo-branch">{repoStatus.current_branch}</div>
+        )}
       </div>
 
-      <button
-        className="search-button"
-        onClick={onSearchClick}
-        title={`Search (${isMac ? 'Cmd+K' : 'Ctrl+K'})`}
-      >
-        <span className="search-icon">
-          <FiSearch />
-        </span>
-        <span className="search-label">Search</span>
-        <kbd className="search-shortcut">{isMac ? '⌘K' : 'Ctrl+K'}</kbd>
-      </button>
-
       <nav className="sidebar-nav">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            className={`nav-item ${currentView === item.id ? 'active' : ''}`}
-            onClick={() => onViewChange(item.id)}
-            title={item.label}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
-          </button>
+        {navItems.map((section) => (
+          <div key={section.section} className="nav-section">
+            <h3 className="section-title">{section.section}</h3>
+            <ul className="section-items">
+              {section.items.map((item) => (
+                <li key={item.id}>
+                  <button
+                    className={`nav-item ${
+                      currentView === item.id ? 'active' : ''
+                    }`}
+                    onClick={() => onViewChange(item.id)}
+                  >
+                    {item.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
       </nav>
 
       <div className="sidebar-footer">
+        {repoStatus && (
+          <div className="repo-info">
+            <div className="repo-name">{repoStatus.project_name}</div>
+            <div className="repo-details">
+              {repoStatus.current_branch} • {repoStatus.current_commit?.substring(0, 7)}
+            </div>
+          </div>
+        )}
         <div className="status-indicator">
           <span className="status-dot"></span>
-          <span className="status-text">Ready</span>
+          <span className="status-label">Ready</span>
         </div>
       </div>
     </aside>

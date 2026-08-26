@@ -5,6 +5,8 @@
 /agent-ledger.exe
 /ledger-mcp.exe
 /dist/
+/bin/
+*.exe
 
 # Agent Ledger local runtime state
 .agent/
