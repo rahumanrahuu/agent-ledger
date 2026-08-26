@@ -1,3 +1,4 @@
+import { FiX } from 'react-icons/fi'
 import './Inspector.css'
 
 function Inspector({ data, onClose }) {
@@ -8,7 +9,7 @@ function Inspector({ data, onClose }) {
       <div className="inspector-header">
         <h2>Details</h2>
         <button className="close-button" onClick={onClose} title="Close Inspector">
-          ✕
+          <FiX />
         </button>
       </div>
 

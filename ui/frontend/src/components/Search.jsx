@@ -1,4 +1,14 @@
 import { useState } from 'react'
+import {
+  FiX,
+  FiTerminal,
+  FiCheckSquare,
+  FiCompass,
+  FiAlertTriangle,
+  FiShield,
+  FiBookmark,
+  FiFileText,
+} from 'react-icons/fi'
 import './Search.css'
 
 function Search({ onSelect, onClose }) {
@@ -27,11 +37,12 @@ function Search({ onSelect, onClose }) {
   }
 
   const typeIcons = {
-    session: '●',
-    decision: '◈',
-    discovery: '▲',
-    failure: '✕',
-    constraint: '◆',
+    session: <FiTerminal />,
+    decision: <FiCheckSquare />,
+    discovery: <FiCompass />,
+    failure: <FiAlertTriangle />,
+    constraint: <FiShield />,
+    checkpoint: <FiBookmark />,
   }
 
   return (
@@ -39,7 +50,9 @@ function Search({ onSelect, onClose }) {
       <div className="search-modal" onClick={(e) => e.stopPropagation()}>
         <div className="search-header">
           <h2>Search</h2>
-          <button className="close-btn" onClick={onClose}>✕</button>
+          <button className="close-btn" onClick={onClose}>
+            <FiX />
+          </button>
         </div>
 
         <form onSubmit={handleSearch} className="search-form">

@@ -50,7 +50,7 @@ function KnowledgeGraph({ onNodeClick }) {
   }
 
   if (loading) return <div className="graph-container">Loading graph...</div>
-  if (!graph || graph.nodes.length === 0)
+  if (!graph || !graph.nodes || graph.nodes.length === 0)
     return <div className="graph-container">No data for graph visualization</div>
 
   // Simple force-directed layout
@@ -60,7 +60,7 @@ function KnowledgeGraph({ onNodeClick }) {
   // Position nodes using a simple grid layout based on type
   const positions = {}
   const typeGroups = {}
-  graph.nodes.forEach((node) => {
+  (graph.nodes || []).forEach((node) => {
     if (!typeGroups[node.type]) typeGroups[node.type] = []
     typeGroups[node.type].push(node)
   })

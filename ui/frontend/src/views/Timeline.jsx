@@ -1,4 +1,11 @@
 import { useState, useEffect } from 'react'
+import {
+  FiCheckSquare,
+  FiCompass,
+  FiAlertTriangle,
+  FiShield,
+  FiBookmark,
+} from 'react-icons/fi'
 import Markdown from '../components/Markdown'
 import './Timeline.css'
 
@@ -30,11 +37,11 @@ function Timeline({ onSelect }) {
     : events
 
   const typeIcons = {
-    decision: '◈',
-    discovery: '▲',
-    failure: '✕',
-    constraint: '◆',
-    checkpoint: '■',
+    decision: <FiCheckSquare />,
+    discovery: <FiCompass />,
+    failure: <FiAlertTriangle />,
+    constraint: <FiShield />,
+    checkpoint: <FiBookmark />,
   }
 
   const typeColors = {

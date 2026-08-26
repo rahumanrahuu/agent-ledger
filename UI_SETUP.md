@@ -23,11 +23,45 @@ Press Ctrl+C to stop
 
 Visit `http://localhost:5173` in your browser.
 
+## Cross-Platform Build Instructions
+
+### macOS & Linux
+
+```bash
+# 1. Build frontend assets
+cd ui/frontend
+npm install
+npm run build
+
+# 2. Build Go binary with embedded assets
+cd ../..
+go build -o bin/agent-ledger ./cmd/ledger
+
+# 3. Run UI
+./bin/agent-ledger ui
+```
+
+### Windows (PowerShell)
+
+```powershell
+# 1. Build frontend assets
+cd ui/frontend
+npm install
+npm run build
+
+# 2. Build Go binary with embedded assets
+cd ..\..
+go build -o bin/agent-ledger.exe .\cmd\ledger
+
+# 3. Run UI
+.\bin\agent-ledger.exe ui
+```
+
 ## Development
 
 ### Building the Frontend
 
-The UI is split into Go backend and React+Vite frontend.
+The UI is split into a Go backend and React+Vite frontend.
 
 **First-time setup:**
 
@@ -37,30 +71,31 @@ npm install
 npm run build
 ```
 
-This creates optimized assets in `ui/dist/` that will be embedded in the binary.
+This creates optimized assets in `ui/dist/` that will be embedded into the Go binary.
 
-**During development** (if you want to modify frontend code):
+**During development** (if modifying frontend code):
 
 ```bash
 cd ui/frontend
 npm run dev
 ```
 
-This starts a development server on port 5173 with hot module reloading. The proxy automatically forwards `/api/*` requests to the Go server.
+This starts a Vite dev server on port 5173 with hot module reloading. The dev proxy forwards `/api/*` requests to the Go backend.
 
 ### Embedding Frontend in Binary
 
-Once the frontend is built, it can be embedded in the Go binary using `go:embed`:
+Frontend embedding is handled by `ui/embed.go` using `go:embed`:
 
-1. Build the frontend: `npm run build` in `ui/frontend`
-2. Update `ui/server.go` to add:
-   ```go
-   //go:embed dist/*
-   var UI embed.FS
-   ```
-3. Rebuild Go binary: `go build ./cmd/ledger`
+```go
+package ui
 
-For now, the server runs in development mode and serves a placeholder UI until the frontend assets are embedded.
+import "embed"
+
+//go:embed dist/*
+var Dist embed.FS
+```
+
+When `npm run build` generates files in `ui/dist/`, running `go build ./cmd/ledger` automatically bundles all frontend assets directly into the standalone binary.
 
 ## Architecture
 
@@ -77,16 +112,18 @@ Provides read-only REST API:
 ### React Frontend (`ui/frontend/src/`)
 
 Apple-designed web interface with:
-- **Sidebar**: Navigation between views
+- **Sidebar**: Navigation with `react-icons` (Overview, Sessions, Decisions, Discoveries, Checkpoints, Timeline)
 - **Inspector**: Right-side detail panel
 - **Views**: Overview, Sessions, Decisions, Discoveries, Checkpoints, Timeline
+- **OS-Aware Shortcut**: Displays `⌘K` on macOS and `Ctrl+K` on Windows/Linux
 
 ## Design Principles
 
 - **Apple Design Language**: SF Pro typography, restrained colors, subtle separators, macOS aesthetics
-- **Local-first**: No external dependencies, all assets embedded in binary
+- **React Icons**: Modern Feather (`fi`) icons replacing plain unicode symbols
+- **Local-first**: No external dependencies at runtime, all assets embedded in binary
 - **Read-only**: All operations are informational only, no state mutations
-- **Vanilla CSS**: No Tailwind; CSS variables for theme system
+- **Vanilla CSS**: CSS variables for theme system
 - **Responsive**: Mobile, tablet, and desktop layouts
 
 ## Design System
@@ -112,44 +149,18 @@ CSS variables in `src/index.css`:
 - `--shadow-*`: sm, md, lg, xl
 - `--radius-*`: sm, md, lg, xl, 2xl
 
-## Light/Dark Mode
-
-Automatically follows system preference via `prefers-color-scheme` media query. Users can override with explicit theme choice (implemented via `data-theme` attribute).
-
-## Performance
-
-- **Minimal JS**: Only React + Vite runtime
-- **Offline**: No external API calls
-- **Fast**: Embedded assets, local only
-- **Accessible**: Semantic HTML, keyboard navigation, focus management
-
 ## Implementation Status
 
 ### ✅ Complete
-- Go backend infrastructure
-- REST API endpoints (basic)
-- React + Vite scaffolding
-- Apple design system CSS
-- Sidebar navigation
-- Inspector panel
-- Overview view (with metrics cards)
-- Sessions view (displays sessions from API)
-- Stub views for other entity types
-
-### 🚧 In Progress
-- Full API implementation (reading from .agent directory)
-- Markdown rendering for decisions/discoveries
-- Knowledge graph visualization (custom SVG)
-- Timeline view
-- Search functionality
-- Dark mode testing
-
-### 📋 Todo
-- Keyboard navigation polish
-- Accessibility audit
-- Mobile testing
-- Frontend asset embedding in binary
-- Production build & release process
+- Go backend REST API infrastructure
+- React + Vite frontend scaffolding
+- Apple design system CSS & React Icons integration
+- Frontend asset embedding in binary (`ui/embed.go`)
+- Cross-platform build support (macOS & Windows)
+- OS-aware search shortcut (`⌘K` on Mac, `Ctrl+K` on Windows/Linux)
+- Sidebar navigation & Inspector panel
+- Overview, Sessions, Decisions, Discoveries, Checkpoints, and Timeline views
+- Knowledge graph visualization null-safety checks
 
 ## Troubleshooting
 
@@ -159,4 +170,4 @@ Automatically follows system preference via `prefers-color-scheme` media query. 
 
 **Port already in use**: Use `--port` flag: `agent-ledger ui --port 5174`
 
-**Frontend shows placeholder**: Frontend assets are not yet embedded. This is normal in development. Build the frontend with `npm run build` to embed assets.
+**Blank screen / Assets not loading**: Ensure `npm run build` was executed inside `ui/frontend` prior to building the Go binary with `go build ./cmd/ledger`.

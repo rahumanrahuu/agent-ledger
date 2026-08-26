@@ -330,8 +330,8 @@ type Edge struct {
 
 // GetGraph returns the knowledge graph
 func (a *API) GetGraph() (*GraphResponse, error) {
-	var nodes []*Node
-	var edges []*Edge
+	nodes := make([]*Node, 0)
+	edges := make([]*Edge, 0)
 
 	// Get sessions
 	sessions, _ := a.historyMgr.GetAllSessions("", "")
