@@ -16,3 +16,24 @@
 # Operating system files
 .DS_Store
 Thumbs.db
+
+# IDE and development
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Dependencies
+node_modules/
+package-lock.json
+npm-debug.log
+
+# Frontend build
+bin/
+ui/dist/
+
+# Internal project documentation (not for open-source)
+PHASES_3_5_SUMMARY.md
+PROJECT_STATUS.md
+UI_IMPLEMENTATION.md
