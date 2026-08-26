@@ -14,6 +14,7 @@ import (
 	"agent-ledger/internal/repository"
 	"agent-ledger/internal/session"
 	"agent-ledger/internal/storage"
+	"agent-ledger/ui"
 )
 
 var Version = "dev"
@@ -57,6 +58,8 @@ func main() {
 		handleExplain()
 	case "validate":
 		handleValidate()
+	case "ui":
+		handleUI()
 	case "--help", "-h", "help":
 		printUsage()
 		os.Exit(0)
@@ -89,6 +92,7 @@ func printUsage() {
 	fmt.Println("  agent-ledger handoff           Create a handoff")
 	fmt.Println("  agent-ledger explain <file>    Explain changes to a file")
 	fmt.Println("  agent-ledger validate          Validate ledger integrity")
+	fmt.Println("  agent-ledger ui [--port <port>] Launch local web UI")
 	fmt.Println("  agent-ledger --help, -h        Show this help message")
 	fmt.Println("  agent-ledger --version, -v     Show version")
 }
@@ -1000,5 +1004,44 @@ func handleValidate() {
 		for _, issue := range issues {
 			fmt.Printf("  - %s\n", issue)
 		}
+	}
+}
+
+func handleUI() {
+	// Check if we're in a git repository
+	if err := repository.MustBeInRepository(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Get repository info
+	repo, err := repository.Detect()
+	if err != nil {
+		fmt.Printf("Error detecting repository: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Check if agent ledger exists
+	storage := storage.New(repo.Root)
+	if !storage.Exists() {
+		fmt.Println("Agent ledger not initialized. Run 'agent-ledger init' first.")
+		os.Exit(1)
+	}
+
+	// Parse --port flag
+	port := 5173
+	args := os.Args[2:]
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--port" && i+1 < len(args) {
+			fmt.Sscanf(args[i+1], "%d", &port)
+			i++
+		}
+	}
+
+	// Start the UI server
+	server := ui.NewServer(repo, storage, port, Version)
+	if err := server.Start(); err != nil {
+		fmt.Printf("Error starting UI server: %v\n", err)
+		os.Exit(1)
 	}
 }

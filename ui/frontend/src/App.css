@@ -1,0 +1,37 @@
+.app {
+  display: flex;
+  height: 100vh;
+  background-color: var(--color-bg-secondary);
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.loading-state,
+.error-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-secondary);
+}
+
+.error-state {
+  color: var(--color-red);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column;
+  }
+
+  .main-content {
+    height: calc(100vh - 60px);
+  }
+}
