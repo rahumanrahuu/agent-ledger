@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Markdown from '../components/Markdown'
 import './EventView.css'
 
-function Discoveries({ onSelect }) {
+function Discoveries({ onSelect, revision }) {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
@@ -22,7 +22,7 @@ function Discoveries({ onSelect }) {
     }
 
     fetchDiscoveries()
-  }, [])
+  }, [revision])
 
   if (loading) return <div className="view-container">Loading discoveries...</div>
 

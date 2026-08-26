@@ -9,7 +9,7 @@ import {
 import Markdown from '../components/Markdown'
 import './Timeline.css'
 
-function Timeline({ onSelect }) {
+function Timeline({ onSelect, revision }) {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
@@ -30,7 +30,7 @@ function Timeline({ onSelect }) {
     }
 
     fetchEvents()
-  }, [])
+  }, [revision])
 
   const filteredEvents = filter
     ? events.filter((e) => e.type === filter)

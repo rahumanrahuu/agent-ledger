@@ -13,13 +13,13 @@ function makeLayout(nodes,mode){
   const sessions=nodes.filter(n=>n.type==='session'),others=nodes.filter(n=>n.type!=='session');return [...sessions.map((n,i)=>({...n,x:150,y:220+i*150})),...others.map((n,i)=>({...n,x:490+(i%3)*265,y:130+Math.floor(i/3)*135}))]
 }
 
-export default function KnowledgeGraph({onNodeClick,onNavigate,preview=false}){
+export default function KnowledgeGraph({onNodeClick,onNavigate,preview=false,revision=0}){
   const shellRef=useRef(null),searchRef=useRef(null),dragRef=useRef(null),spaceRef=useRef(false)
   const[graph,setGraph]=useState(null),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[layoutMode,setLayoutMode]=useState('auto')
   const[positions,setPositions]=useState({}),[view,setView]=useState({x:0,y:0,scale:1}),[selected,setSelected]=useState([]),[hidden,setHidden]=useState([])
   const[filters,setFilters]=useState({session:true,decision:true,discovery:true,checkpoint:true}),[filterOpen,setFilterOpen]=useState(false),[context,setContext]=useState(null),[box,setBox]=useState(null)
   const load=useCallback(()=>{setLoading(true);fetch('/api/graph').then(r=>{if(!r.ok)throw Error('Graph request failed');return r.json()}).then(data=>{setGraph(data);setHidden([])}).catch(()=>setGraph(null)).finally(()=>setLoading(false))},[])
-  useEffect(load,[load])
+  useEffect(load,[load,revision])
   const rawNodes=graph?.nodes||[],rawEdges=graph?.edges||[]
   useEffect(()=>{const laid=makeLayout(rawNodes,layoutMode);setPositions(Object.fromEntries(laid.map(n=>[n.id,{x:n.x,y:n.y}])));setSelected([])},[graph,layoutMode])
   const visibleNodes=useMemo(()=>rawNodes.filter(n=>filters[n.type]!==false&&!hidden.includes(n.id)),[rawNodes,filters,hidden])

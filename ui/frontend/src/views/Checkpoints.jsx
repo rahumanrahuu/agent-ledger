@@ -1,4 +1,12 @@
 import {useEffect,useState} from 'react'
 import {FiBookmark,FiClock,FiArrowRight} from 'react-icons/fi'
 import './CommonView.css'
-export default function Checkpoints({onSelect}){const[items,setItems]=useState([]),[loading,setLoading]=useState(true);useEffect(()=>{fetch('/api/events?type=checkpoint').then(r=>r.json()).then(d=>setItems(d.events||[])).catch(()=>{}).finally(()=>setLoading(false))},[]);return <div className="view-container"><header className="view-header"><div><h1>Checkpoints</h1><p>Milestones captured across agent sessions</p></div><span className="count-pill">{items.length} records</span></header>{loading?<div className="empty-state">Loading checkpoints…</div>:items.length?<div className="checkpoint-grid">{items.map(x=><button key={x.id} className="checkpoint-card" onClick={()=>onSelect({type:'checkpoint',...x})}><span className="checkpoint-icon"><FiBookmark/></span><small>CHECKPOINT</small><h3>{x.title}</h3><p>{x.content?.slice(0,120)||'Recorded milestone'}</p><footer><span><FiClock/> {new Date(x.timestamp).toLocaleDateString()}</span><FiArrowRight/></footer></button>)}</div>:<div className="empty-state"><FiBookmark/><p>No checkpoints recorded yet</p><small>Created checkpoints will appear here automatically.</small></div>}</div>}
+
+export default function Checkpoints({onSelect,revision}){
+  const[items,setItems]=useState([])
+  const[loading,setLoading]=useState(true)
+  useEffect(()=>{
+    fetch('/api/events?type=checkpoint').then(r=>r.json()).then(d=>setItems(d.events||[])).catch(()=>{}).finally(()=>setLoading(false))
+  },[revision])
+  return <div className="view-container"><header className="view-header"><div><h1>Checkpoints</h1><p>Milestones captured across agent sessions</p></div><span className="count-pill">{items.length} records</span></header>{loading?<div className="empty-state">Loading checkpoints…</div>:items.length?<div className="checkpoint-grid">{items.map(x=><button key={x.id} className="checkpoint-card" onClick={()=>onSelect({type:'checkpoint',...x})}><span className="checkpoint-icon"><FiBookmark/></span><small>CHECKPOINT</small><h3>{x.title}</h3><p>{x.content?.slice(0,120)||'Recorded milestone'}</p><footer><span><FiClock/> {new Date(x.timestamp).toLocaleDateString()}</span><FiArrowRight/></footer></button>)}</div>:<div className="empty-state"><FiBookmark/><p>No checkpoints recorded yet</p><small>Created checkpoints will appear here automatically.</small></div>}</div>
+}

@@ -6,11 +6,17 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
+	"time"
 
 	"agent-ledger/internal/api"
 	"agent-ledger/internal/repository"
 	"agent-ledger/internal/storage"
+	"github.com/gorilla/websocket"
 )
 
 // Server handles the UI HTTP server
@@ -20,6 +26,8 @@ type Server struct {
 	port    int
 	version string
 	api     *api.API
+	clients map[*websocket.Conn]struct{}
+	mu      sync.Mutex
 }
 
 // NewServer creates a new UI server
@@ -30,6 +38,7 @@ func NewServer(repo *repository.Repository, storage *storage.Storage, port int, 
 		port:    port,
 		version: version,
 		api:     api.NewAPI(repo, storage, version),
+		clients: make(map[*websocket.Conn]struct{}),
 	}
 }
 
@@ -44,6 +53,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/events", s.handleEvents)
 	mux.HandleFunc("/api/graph", s.handleGraph)
 	mux.HandleFunc("/api/search", s.handleSearch)
+	mux.HandleFunc("/api/live", s.handleLive)
 
 	// Frontend - will be served from embedded assets in the future
 	// For now, serve index.html for SPA routing
@@ -59,8 +69,79 @@ func (s *Server) Start() error {
 	url := fmt.Sprintf("http://%s", addr)
 	fmt.Printf("Agent Ledger UI starting at %s\n", url)
 	fmt.Println("Press Ctrl+C to stop")
+	go s.watchLedger()
 
 	return http.Serve(listener, mux)
+}
+
+var liveUpgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
+
+// handleLive keeps browsers connected for lightweight ledger-change notifications.
+// API responses remain the source of truth; clients refetch after each notification.
+func (s *Server) handleLive(w http.ResponseWriter, r *http.Request) {
+	conn, err := liveUpgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+	s.mu.Lock()
+	s.clients[conn] = struct{}{}
+	s.mu.Unlock()
+	_ = conn.WriteJSON(map[string]any{"type": "connected", "timestamp": time.Now().UTC()})
+	for {
+		if _, _, err := conn.ReadMessage(); err != nil {
+			s.mu.Lock()
+			delete(s.clients, conn)
+			s.mu.Unlock()
+			_ = conn.Close()
+			return
+		}
+	}
+}
+
+// watchLedger polls a small metadata fingerprint. This catches writes from the
+// CLI and the separate MCP process without coupling either writer to the UI.
+func (s *Server) watchLedger() {
+	last := s.ledgerFingerprint()
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		next := s.ledgerFingerprint()
+		if next != last {
+			last = next
+			s.broadcastLiveUpdate()
+		}
+	}
+}
+
+func (s *Server) ledgerFingerprint() string {
+	root := filepath.Join(s.repo.Root, ".agent")
+	entries := make([]string, 0)
+	_ = filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return nil
+		}
+		info, err := os.Stat(path)
+		if err == nil {
+			entries = append(entries, fmt.Sprintf("%s:%d:%d", path, info.Size(), info.ModTime().UnixNano()))
+		}
+		return nil
+	})
+	sort.Strings(entries)
+	return strings.Join(entries, "|")
+}
+
+func (s *Server) broadcastLiveUpdate() {
+	payload, _ := json.Marshal(map[string]any{"type": "ledger.updated", "timestamp": time.Now().UTC()})
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for conn := range s.clients {
+		if err := conn.WriteMessage(websocket.TextMessage, payload); err != nil {
+			_ = conn.Close()
+			delete(s.clients, conn)
+		}
+	}
 }
 
 // handleOverview serves the project overview

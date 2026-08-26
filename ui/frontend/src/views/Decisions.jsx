@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Markdown from '../components/Markdown'
 import './EventView.css'
 
-function Decisions({ onSelect }) {
+function Decisions({ onSelect, revision }) {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
@@ -22,7 +22,7 @@ function Decisions({ onSelect }) {
     }
 
     fetchDecisions()
-  }, [])
+  }, [revision])
 
   if (loading) return <div className="view-container">Loading decisions...</div>
 

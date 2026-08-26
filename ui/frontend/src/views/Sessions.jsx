@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import './Sessions.css'
 
-function Sessions({ onSelect }) {
+function Sessions({ onSelect, revision }) {
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -20,7 +20,7 @@ function Sessions({ onSelect }) {
     }
 
     fetchSessions()
-  }, [])
+  }, [revision])
 
   if (loading) return <div className="view-container">Loading sessions...</div>
 
