@@ -8,6 +8,7 @@ import Discoveries from './views/Discoveries'
 import Checkpoints from './views/Checkpoints'
 import Timeline from './views/Timeline'
 import Inspector from './components/Inspector'
+import Search from './components/Search'
 
 function App() {
   const [currentView, setCurrentView] = useState('overview')
@@ -16,6 +17,7 @@ function App() {
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   useEffect(() => {
     const fetchOverview = async () => {
@@ -33,6 +35,24 @@ function App() {
 
     fetchOverview()
   }, [])
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Cmd+K or Ctrl+K for search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen(!searchOpen)
+      }
+      // Escape to close search
+      if (e.key === 'Escape' && searchOpen) {
+        setSearchOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [searchOpen])
 
   const handleSelectItem = (data) => {
     setInspectorData(data)
@@ -60,7 +80,11 @@ function App() {
 
   return (
     <div className="app">
-      <Sidebar currentView={currentView} onViewChange={setCurrentView} />
+      <Sidebar
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        onSearchClick={() => setSearchOpen(true)}
+      />
       <main className="main-content">
         {loading ? (
           <div className="loading-state">Loading...</div>
@@ -74,6 +98,12 @@ function App() {
         <Inspector
           data={inspectorData}
           onClose={() => setInspectorOpen(false)}
+        />
+      )}
+      {searchOpen && (
+        <Search
+          onSelect={handleSelectItem}
+          onClose={() => setSearchOpen(false)}
         />
       )}
     </div>

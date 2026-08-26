@@ -1,3 +1,4 @@
+import KnowledgeGraph from '../components/KnowledgeGraph'
 import './Overview.css'
 
 function Overview({ data, onSelect }) {
@@ -63,13 +64,7 @@ function Overview({ data, onSelect }) {
 
       <section className="overview-section">
         <h2>Knowledge Graph</h2>
-        <div className="knowledge-graph-placeholder">
-          <div className="placeholder-content">
-            <div className="placeholder-icon">◆</div>
-            <p>Knowledge graph visualization coming soon</p>
-            <p className="text-tertiary text-sm">Shows relationships between sessions, decisions, discoveries, and checkpoints</p>
-          </div>
-        </div>
+        <KnowledgeGraph onNodeClick={onSelect} />
       </section>
     </div>
   )

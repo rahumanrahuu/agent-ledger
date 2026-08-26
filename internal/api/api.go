@@ -1,7 +1,8 @@
 package api
 
 import (
-	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"agent-ledger/internal/checkpoint"
@@ -43,15 +44,15 @@ func NewAPI(repo *repository.Repository, st *storage.Storage, version string) *A
 
 // OverviewResponse contains project overview data
 type OverviewResponse struct {
-	ProjectName       string    `json:"project_name"`
-	RepositoryRoot    string    `json:"repository_root"`
-	CurrentBranch     string    `json:"current_branch"`
-	CurrentCommit     string    `json:"current_commit"`
-	Version           string    `json:"version"`
-	SessionCount      int       `json:"session_count"`
-	DecisionCount     int       `json:"decision_count"`
-	DiscoveryCount    int       `json:"discovery_count"`
-	CheckpointCount   int       `json:"checkpoint_count"`
+	ProjectName       string     `json:"project_name"`
+	RepositoryRoot    string     `json:"repository_root"`
+	CurrentBranch     string     `json:"current_branch"`
+	CurrentCommit     string     `json:"current_commit"`
+	Version           string     `json:"version"`
+	SessionCount      int        `json:"session_count"`
+	DecisionCount     int        `json:"decision_count"`
+	DiscoveryCount    int        `json:"discovery_count"`
+	CheckpointCount   int        `json:"checkpoint_count"`
 	LastActivityTime  *time.Time `json:"last_activity_time,omitempty"`
 }
 
@@ -68,26 +69,27 @@ func (a *API) GetOverview() (*OverviewResponse, error) {
 
 	projectName := "Agent Ledger Project"
 	if content, err := a.storage.ReadMarkdown("project.md"); err == nil && len(content) > 0 {
-		// Try to extract project name from project.md
-		lines := make([]rune, 0, len(content))
-		for _, r := range content {
-			lines = append(lines, r)
-		}
-		if len(lines) > 0 {
-			projectName = "Project"
-		}
+		projectName = "Project"
+	}
+
+	var lastActivityTime *time.Time
+	if len(sessions) > 0 && sessions[len(sessions)-1].EndTime != nil {
+		lastActivityTime = sessions[len(sessions)-1].EndTime
+	} else if len(sessions) > 0 {
+		lastActivityTime = &sessions[len(sessions)-1].StartTime
 	}
 
 	return &OverviewResponse{
-		ProjectName:     projectName,
-		RepositoryRoot:  a.repo.Root,
-		CurrentBranch:   a.repo.Branch,
-		CurrentCommit:   a.repo.Head,
-		Version:         a.version,
-		SessionCount:    len(sessions),
-		DecisionCount:   len(decisions),
-		DiscoveryCount:  len(discoveries),
-		CheckpointCount: len(checkpoints),
+		ProjectName:      projectName,
+		RepositoryRoot:   a.repo.Root,
+		CurrentBranch:    a.repo.Branch,
+		CurrentCommit:    a.repo.Head,
+		Version:          a.version,
+		SessionCount:     len(sessions),
+		DecisionCount:    len(decisions),
+		DiscoveryCount:   len(discoveries),
+		CheckpointCount:  len(checkpoints),
+		LastActivityTime: lastActivityTime,
 	}, nil
 }
 
@@ -196,22 +198,24 @@ func (a *API) GetSessionDetail(sessionID string) (*SessionDetailResponse, error)
 	}, nil
 }
 
-// EventListResponse contains a list of events
-type EventListResponse struct {
-	Events []json.RawMessage `json:"events"`
+// EventItem represents a single event in the timeline
+type EventItem struct {
+	ID        string    `json:"id"`
+	Type      string    `json:"type"` // "decision", "discovery", "failure", "constraint"
+	Title     string    `json:"title"`
+	Content   string    `json:"content,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
+	Path      string    `json:"path"`
 }
 
-// GetEvents returns all events (decisions, discoveries, checkpoints, etc.) in chronological order
+// EventListResponse contains a list of events
+type EventListResponse struct {
+	Events []*EventItem `json:"events"`
+}
+
+// GetEvents returns all events in chronological order
 func (a *API) GetEvents(filterType string) (*EventListResponse, error) {
-	var eventList []json.RawMessage
-
-	// Collect all events with timestamps for sorting
-	type timedEvent struct {
-		timestamp time.Time
-		data      json.RawMessage
-	}
-
-	var events []timedEvent
+	var events []*EventItem
 
 	// Get decisions
 	if filterType == "" || filterType == "decision" {
@@ -220,30 +224,100 @@ func (a *API) GetEvents(filterType string) (*EventListResponse, error) {
 			path := "decisions/" + file
 			content, _ := a.storage.ReadMarkdown(path)
 			if len(content) > 0 {
-				// Parse as decision - simplified for now
-				events = append(events, timedEvent{
-					timestamp: time.Now(),
-					data:      json.RawMessage(content),
+				title := strings.TrimSuffix(file, ".md")
+				id := extractIDFromFilename(file)
+				events = append(events, &EventItem{
+					ID:        id,
+					Type:      "decision",
+					Title:     title,
+					Content:   content,
+					Timestamp: extractTimestampFromContent(content),
+					Path:      path,
 				})
 			}
 		}
 	}
 
-	// For now, return empty list - will be expanded
-	return &EventListResponse{Events: eventList}, nil
+	// Get discoveries
+	if filterType == "" || filterType == "discovery" {
+		discoveryFiles, _ := a.storage.ListFiles("discoveries")
+		for _, file := range discoveryFiles {
+			path := "discoveries/" + file
+			content, _ := a.storage.ReadMarkdown(path)
+			if len(content) > 0 {
+				title := strings.TrimSuffix(file, ".md")
+				id := extractIDFromFilename(file)
+				events = append(events, &EventItem{
+					ID:        id,
+					Type:      "discovery",
+					Title:     title,
+					Content:   content,
+					Timestamp: extractTimestampFromContent(content),
+					Path:      path,
+				})
+			}
+		}
+	}
+
+	// Get failures
+	if filterType == "" || filterType == "failure" {
+		failureFiles, _ := a.storage.ListFiles("failures")
+		for _, file := range failureFiles {
+			path := "failures/" + file
+			content, _ := a.storage.ReadMarkdown(path)
+			if len(content) > 0 {
+				title := strings.TrimSuffix(file, ".md")
+				id := extractIDFromFilename(file)
+				events = append(events, &EventItem{
+					ID:        id,
+					Type:      "failure",
+					Title:     title,
+					Content:   content,
+					Timestamp: extractTimestampFromContent(content),
+					Path:      path,
+				})
+			}
+		}
+	}
+
+	// Get constraints
+	if filterType == "" || filterType == "constraint" {
+		constraintFiles, _ := a.storage.ListFiles("constraints")
+		for _, file := range constraintFiles {
+			path := "constraints/" + file
+			content, _ := a.storage.ReadMarkdown(path)
+			if len(content) > 0 {
+				title := strings.TrimSuffix(file, ".md")
+				id := extractIDFromFilename(file)
+				events = append(events, &EventItem{
+					ID:        id,
+					Type:      "constraint",
+					Title:     title,
+					Content:   content,
+					Timestamp: extractTimestampFromContent(content),
+					Path:      path,
+				})
+			}
+		}
+	}
+
+	// Sort by timestamp (newest first)
+	sortEventsByTimestamp(events)
+
+	return &EventListResponse{Events: events}, nil
 }
 
 // GraphResponse contains knowledge graph data
 type GraphResponse struct {
-	Nodes []Node `json:"nodes"`
-	Edges []Edge `json:"edges"`
+	Nodes []*Node `json:"nodes"`
+	Edges []*Edge `json:"edges"`
 }
 
 // Node represents a node in the knowledge graph
 type Node struct {
 	ID    string `json:"id"`
 	Label string `json:"label"`
-	Type  string `json:"type"` // "session", "decision", "discovery", "checkpoint"
+	Type  string `json:"type"` // "session", "decision", "discovery", "checkpoint", etc.
 	Data  any    `json:"data,omitempty"`
 }
 
@@ -251,18 +325,18 @@ type Node struct {
 type Edge struct {
 	Source string `json:"source"`
 	Target string `json:"target"`
-	Type   string `json:"type"` // "contains", "relates_to", etc.
+	Type   string `json:"type"` // "contains", "relates_to"
 }
 
 // GetGraph returns the knowledge graph
 func (a *API) GetGraph() (*GraphResponse, error) {
-	var nodes []Node
-	var edges []Edge
+	var nodes []*Node
+	var edges []*Edge
 
 	// Get sessions
 	sessions, _ := a.historyMgr.GetAllSessions("", "")
 	for _, s := range sessions {
-		nodes = append(nodes, Node{
+		nodes = append(nodes, &Node{
 			ID:    s.ID,
 			Label: s.Agent,
 			Type:  "session",
@@ -270,7 +344,63 @@ func (a *API) GetGraph() (*GraphResponse, error) {
 		})
 	}
 
-	// TODO: Add decisions, discoveries, checkpoints, and relationships
+	// Get decisions
+	decisions, _ := a.storage.ListFiles("decisions")
+	for _, file := range decisions {
+		id := extractIDFromFilename(file)
+		title := strings.TrimSuffix(file, ".md")
+		nodes = append(nodes, &Node{
+			ID:    id,
+			Label: title,
+			Type:  "decision",
+		})
+		// Connect to first session
+		if len(sessions) > 0 {
+			edges = append(edges, &Edge{
+				Source: sessions[0].ID,
+				Target: id,
+				Type:   "contains",
+			})
+		}
+	}
+
+	// Get discoveries
+	discoveries, _ := a.storage.ListFiles("discoveries")
+	for _, file := range discoveries {
+		id := extractIDFromFilename(file)
+		title := strings.TrimSuffix(file, ".md")
+		nodes = append(nodes, &Node{
+			ID:    id,
+			Label: title,
+			Type:  "discovery",
+		})
+		if len(sessions) > 0 {
+			edges = append(edges, &Edge{
+				Source: sessions[0].ID,
+				Target: id,
+				Type:   "contains",
+			})
+		}
+	}
+
+	// Get checkpoints
+	checkpoints, _ := a.storage.ListFiles("checkpoints")
+	for _, file := range checkpoints {
+		id := extractIDFromFilename(file)
+		title := strings.TrimSuffix(file, ".md")
+		nodes = append(nodes, &Node{
+			ID:    id,
+			Label: title,
+			Type:  "checkpoint",
+		})
+		if len(sessions) > 0 {
+			edges = append(edges, &Edge{
+				Source: sessions[0].ID,
+				Target: id,
+				Type:   "contains",
+			})
+		}
+	}
 
 	return &GraphResponse{
 		Nodes: nodes,
@@ -280,20 +410,174 @@ func (a *API) GetGraph() (*GraphResponse, error) {
 
 // SearchResponse contains search results
 type SearchResponse struct {
-	Results []SearchResult `json:"results"`
+	Results []*SearchResult `json:"results"`
 }
 
 // SearchResult represents a single search result
 type SearchResult struct {
-	ID       string `json:"id"`
-	Type     string `json:"type"` // "session", "decision", etc.
-	Title    string `json:"title"`
-	Excerpt  string `json:"excerpt"`
-	Path     string `json:"path"`
+	ID      string `json:"id"`
+	Type    string `json:"type"`
+	Title   string `json:"title"`
+	Excerpt string `json:"excerpt"`
+	Path    string `json:"path"`
 }
 
 // Search searches across all entities
 func (a *API) Search(query string) (*SearchResponse, error) {
-	// TODO: Implement search
-	return &SearchResponse{Results: []SearchResult{}}, nil
+	query = strings.ToLower(query)
+	var results []*SearchResult
+
+	// Search decisions
+	decisions, _ := a.storage.ListFiles("decisions")
+	for _, file := range decisions {
+		path := "decisions/" + file
+		content, _ := a.storage.ReadMarkdown(path)
+		title := strings.TrimSuffix(file, ".md")
+
+		if matches(title, content, query) {
+			id := extractIDFromFilename(file)
+			excerpt := extractExcerpt(content, 150)
+			results = append(results, &SearchResult{
+				ID:      id,
+				Type:    "decision",
+				Title:   title,
+				Excerpt: excerpt,
+				Path:    path,
+			})
+		}
+	}
+
+	// Search discoveries
+	discoveries, _ := a.storage.ListFiles("discoveries")
+	for _, file := range discoveries {
+		path := "discoveries/" + file
+		content, _ := a.storage.ReadMarkdown(path)
+		title := strings.TrimSuffix(file, ".md")
+
+		if matches(title, content, query) {
+			id := extractIDFromFilename(file)
+			excerpt := extractExcerpt(content, 150)
+			results = append(results, &SearchResult{
+				ID:      id,
+				Type:    "discovery",
+				Title:   title,
+				Excerpt: excerpt,
+				Path:    path,
+			})
+		}
+	}
+
+	// Search failures
+	failures, _ := a.storage.ListFiles("failures")
+	for _, file := range failures {
+		path := "failures/" + file
+		content, _ := a.storage.ReadMarkdown(path)
+		title := strings.TrimSuffix(file, ".md")
+
+		if matches(title, content, query) {
+			id := extractIDFromFilename(file)
+			excerpt := extractExcerpt(content, 150)
+			results = append(results, &SearchResult{
+				ID:      id,
+				Type:    "failure",
+				Title:   title,
+				Excerpt: excerpt,
+				Path:    path,
+			})
+		}
+	}
+
+	// Search constraints
+	constraints, _ := a.storage.ListFiles("constraints")
+	for _, file := range constraints {
+		path := "constraints/" + file
+		content, _ := a.storage.ReadMarkdown(path)
+		title := strings.TrimSuffix(file, ".md")
+
+		if matches(title, content, query) {
+			id := extractIDFromFilename(file)
+			excerpt := extractExcerpt(content, 150)
+			results = append(results, &SearchResult{
+				ID:      id,
+				Type:    "constraint",
+				Title:   title,
+				Excerpt: excerpt,
+				Path:    path,
+			})
+		}
+	}
+
+	// Search sessions
+	sessions, _ := a.historyMgr.GetAllSessions("", "")
+	for _, s := range sessions {
+		if strings.Contains(strings.ToLower(s.Agent), query) {
+			excerpt := fmt.Sprintf("Session %s (%s) on branch %s", s.ID[:8], s.Agent, s.Branch)
+			results = append(results, &SearchResult{
+				ID:      s.ID,
+				Type:    "session",
+				Title:   s.Agent,
+				Excerpt: excerpt,
+				Path:    fmt.Sprintf("sessions/%s", s.ID),
+			})
+		}
+	}
+
+	return &SearchResponse{Results: results}, nil
+}
+
+// Helper functions
+
+func extractIDFromFilename(filename string) string {
+	parts := strings.SplitN(filename, "-", 2)
+	if len(parts) > 0 {
+		return strings.TrimSuffix(parts[0], ".md")
+	}
+	return strings.TrimSuffix(filename, ".md")
+}
+
+func extractTimestampFromContent(content string) time.Time {
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "timestamp") || strings.Contains(line, "Timestamp") {
+			if idx := strings.Index(line, "202"); idx >= 0 && idx+19 <= len(line) {
+				dateStr := line[idx : idx+19]
+				if t, err := time.Parse("2006-01-02T15:04:05", dateStr); err == nil {
+					return t
+				}
+			}
+		}
+	}
+	return time.Now()
+}
+
+func extractExcerpt(content string, maxLen int) string {
+	lines := strings.Split(content, "\n")
+	excerpt := ""
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if len(line) > 0 && !strings.HasPrefix(line, "#") && !strings.HasPrefix(line, "{") {
+			excerpt = line
+			break
+		}
+	}
+	if len(excerpt) > maxLen {
+		excerpt = excerpt[:maxLen] + "..."
+	}
+	return excerpt
+}
+
+func matches(title, content, query string) bool {
+	contentLower := strings.ToLower(content)
+	titleLower := strings.ToLower(title)
+	return strings.Contains(titleLower, query) || strings.Contains(contentLower, query)
+}
+
+func sortEventsByTimestamp(events []*EventItem) {
+	for i := 0; i < len(events); i++ {
+		for j := i + 1; j < len(events); j++ {
+			if events[j].Timestamp.After(events[i].Timestamp) {
+				events[i], events[j] = events[j], events[i]
+			}
+		}
+	}
 }

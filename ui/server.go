@@ -13,9 +13,6 @@ import (
 	"agent-ledger/internal/storage"
 )
 
-// UI is the embedded frontend filesystem (empty in dev builds)
-var UI fs.FS = nil
-
 // Server handles the UI HTTP server
 type Server struct {
 	repo    *repository.Repository
@@ -202,19 +199,20 @@ func (s *Server) handleFrontend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If UI is embedded, serve from it
-	if UI != nil {
-		// Serve files from embedded filesystem
+	// Try to serve from embedded filesystem
+	fsys, err := fs.Sub(Dist, "dist")
+	if err == nil {
+		// Embedded assets are available
 		if path == "/" {
 			path = "index.html"
 		} else {
 			path = strings.TrimPrefix(path, "/")
 		}
 
-		file, err := fs.ReadFile(UI, path)
+		file, err := fs.ReadFile(fsys, path)
 		if err != nil {
 			// Try index.html for SPA routing
-			file, err = fs.ReadFile(UI, "index.html")
+			file, err = fs.ReadFile(fsys, "index.html")
 			if err != nil {
 				http.Error(w, "Not found", http.StatusNotFound)
 				return

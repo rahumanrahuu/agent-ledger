@@ -120,39 +120,6 @@
   color: var(--color-gray);
 }
 
-.knowledge-graph-placeholder {
-  background-color: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-10);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-}
-
-.placeholder-content {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-3);
-}
-
-.placeholder-icon {
-  font-size: 48px;
-  color: var(--color-text-tertiary);
-}
-
-.placeholder-content p {
-  font-size: var(--font-size-lg);
-  color: var(--color-text-secondary);
-  margin: 0;
-}
-
-.placeholder-content .text-sm {
-  font-size: var(--font-size-md);
-}
 
 /* Responsive */
 @media (max-width: 1024px) {

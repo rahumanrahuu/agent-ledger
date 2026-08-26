@@ -1,6 +1,6 @@
 import './Sidebar.css'
 
-function Sidebar({ currentView, onViewChange }) {
+function Sidebar({ currentView, onViewChange, onSearchClick }) {
   const navItems = [
     { id: 'overview', label: 'Overview', icon: '◆' },
     { id: 'sessions', label: 'Sessions', icon: '●' },
@@ -16,6 +16,12 @@ function Sidebar({ currentView, onViewChange }) {
         <div className="app-icon">◦</div>
         <h1>Agent Ledger</h1>
       </div>
+
+      <button className="search-button" onClick={onSearchClick} title="Search (Cmd+K)">
+        <span className="search-icon">⌕</span>
+        <span className="search-label">Search</span>
+        <kbd className="search-shortcut">⌘K</kbd>
+      </button>
 
       <nav className="sidebar-nav">
         {navItems.map((item) => (
