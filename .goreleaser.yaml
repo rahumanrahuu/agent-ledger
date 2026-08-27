@@ -5,7 +5,6 @@ version: 2
 before:
   hooks:
     - go mod tidy
-    - cd ui/frontend && npm install && npm run build
 
 builds:
   - id: agent-ledger
