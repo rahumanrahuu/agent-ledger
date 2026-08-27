@@ -8,6 +8,7 @@ import (
 	"agent-ledger/internal/checkpoint"
 	"agent-ledger/internal/events"
 	"agent-ledger/internal/history"
+	"agent-ledger/internal/memory"
 	"agent-ledger/internal/repository"
 	"agent-ledger/internal/session"
 	"agent-ledger/internal/storage"
@@ -21,6 +22,7 @@ type API struct {
 	checkpointMgr *checkpoint.Manager
 	historyMgr    *history.Manager
 	eventsMgr     *events.Manager
+	memoryMgr     *memory.Manager
 	version       string
 }
 
@@ -30,6 +32,13 @@ func NewAPI(repo *repository.Repository, st *storage.Storage, version string) *A
 	checkpointMgr := checkpoint.NewManager(st)
 	historyMgr := history.NewManager(sessionMgr, checkpointMgr, st)
 	eventsMgr := events.NewManager(st)
+	
+	// Initialize memory manager - handle potential errors gracefully
+	memoryMgr, err := memory.NewManager(repo.Root())
+	if err != nil {
+		// Log error but don't fail - memory features will be disabled
+		memoryMgr = nil
+	}
 
 	return &API{
 		repo:          repo,
@@ -38,6 +47,7 @@ func NewAPI(repo *repository.Repository, st *storage.Storage, version string) *A
 		checkpointMgr: checkpointMgr,
 		historyMgr:    historyMgr,
 		eventsMgr:     eventsMgr,
+		memoryMgr:     memoryMgr,
 		version:       version,
 	}
 }
