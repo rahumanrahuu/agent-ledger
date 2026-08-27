@@ -14,5 +14,5 @@ import "embed"
 // The GoReleaser configuration automatically builds the frontend before Go compilation.
 // For local development builds, manually build the frontend first.
 //
-//go:embed dist/*
+//go:embed all:dist/*
 var Dist embed.FS
