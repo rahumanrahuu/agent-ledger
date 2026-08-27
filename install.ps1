@@ -135,30 +135,26 @@ try {
     Expand-Archive -Path $ZipPath -DestinationPath $TempDir -Force
 
     $AgentLedgerExe = Join-Path $TempDir "agent-ledger.exe"
-    $LedgerMcpExe = Join-Path $TempDir "ledger-mcp.exe"
 
-    if (-not (Test-Path $AgentLedgerExe) -or -not (Test-Path $LedgerMcpExe)) {
-        Write-Error "Release archive did not contain agent-ledger.exe and ledger-mcp.exe."
+    if (-not (Test-Path $AgentLedgerExe)) {
+        Write-Error "Release archive did not contain agent-ledger.exe."
         exit 1
     }
 
-    Write-Host "Installing executables to $InstallDir..."
+    Write-Host "Installing executable to $InstallDir..."
     Copy-Item -Path $AgentLedgerExe -Destination (Join-Path $InstallDir "agent-ledger.exe") -Force
-    Copy-Item -Path $LedgerMcpExe -Destination (Join-Path $InstallDir "ledger-mcp.exe") -Force
 
     # Verify installation
     $InstalledAgentLedger = Join-Path $InstallDir "agent-ledger.exe"
-    $InstalledLedgerMcp = Join-Path $InstallDir "ledger-mcp.exe"
 
-    if (-not ((Test-Path $InstalledAgentLedger) -and (Test-Path $InstalledLedgerMcp))) {
+    if (-not (Test-Path $InstalledAgentLedger)) {
         Write-Error "Installation verification failed in $InstallDir."
         exit 1
     }
 
     Write-Host ""
     Write-Host "Successfully installed Agent Ledger ($Tag)!" -ForegroundColor Green
-    Write-Host "  - CLI: $InstalledAgentLedger"
-    Write-Host "  - MCP: $InstalledLedgerMcp"
+    Write-Host "  - Binary: $InstalledAgentLedger"
     Write-Host ""
 
     # Ensure InstallDir is on the User PATH (persists across sessions and reboots)
@@ -201,7 +197,7 @@ public class NativeMethods {
 
     Write-Host "Verification:"
     Write-Host "  Run 'agent-ledger --help' to get started."
-    Write-Host "  Run 'ledger-mcp --help' to view MCP server details."
+    Write-Host "  Run 'agent-ledger mcp' to start the MCP server."
     if ($Host.Name -eq "ConsoleHost") {
         Write-Host ""
         Write-Host "Note: restart your terminal for PATH changes to apply in new sessions."

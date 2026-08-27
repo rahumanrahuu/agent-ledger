@@ -3,14 +3,17 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
 	"agent-ledger/internal/checkpoint"
-	"agent-ledger/internal/context"
+	agentcontext "agent-ledger/internal/context"
 	"agent-ledger/internal/events"
 	"agent-ledger/internal/git"
 	"agent-ledger/internal/history"
+	mcpinternal "agent-ledger/internal/mcp"
 	"agent-ledger/internal/repository"
 	"agent-ledger/internal/session"
 	"agent-ledger/internal/storage"
@@ -60,6 +63,8 @@ func main() {
 		handleValidate()
 	case "ui":
 		handleUI()
+	case "mcp":
+		handleMCP()
 	case "--help", "-h", "help":
 		printUsage()
 		os.Exit(0)
@@ -90,9 +95,10 @@ func printUsage() {
 	fmt.Println("  agent-ledger failure           Record a failure")
 	fmt.Println("  agent-ledger constraint        Record a constraint")
 	fmt.Println("  agent-ledger handoff           Create a handoff")
-	fmt.Println("  agent-ledger explain <file>    Explain changes to a file")
-	fmt.Println("  agent-ledger validate          Validate ledger integrity")
-	fmt.Println("  agent-ledger ui [--port <port>] Launch local web UI")
+	fmt.Println("  agent-ledger explain <file>      Explain development history of a file")
+	fmt.Println("  agent-ledger validate            Validate ledger integrity")
+	fmt.Println("  agent-ledger ui [--port <port>] [--host <host>] [--open]  Launch local web UI")
+	fmt.Println("  agent-ledger mcp               Start MCP server over stdio")
 	fmt.Println("  agent-ledger --help, -h        Show this help message")
 	fmt.Println("  agent-ledger --version, -v     Show version")
 }
@@ -516,7 +522,7 @@ func handleContext() {
 	sessionManager := session.NewManager(storage)
 	checkpointManager := checkpoint.NewManager(storage)
 	historyManager := history.NewManager(sessionManager, checkpointManager, storage)
-	contextManager := context.NewManager(historyManager, checkpointManager, storage)
+	contextManager := agentcontext.NewManager(historyManager, checkpointManager, storage)
 
 	// Compile context
 	ctx, err := contextManager.Compile(repo, task)
@@ -898,7 +904,7 @@ func handleExplain() {
 	sessionManager := session.NewManager(storage)
 	checkpointManager := checkpoint.NewManager(storage)
 	historyManager := history.NewManager(sessionManager, checkpointManager, storage)
-	contextManager := context.NewManager(historyManager, checkpointManager, storage)
+	contextManager := agentcontext.NewManager(historyManager, checkpointManager, storage)
 
 	// Try to get active session for better context
 	currentSession, err := sessionManager.GetCurrent()
@@ -1008,6 +1014,23 @@ func handleValidate() {
 }
 
 func handleUI() {
+	// Check for help flag
+	args := os.Args[2:]
+	for _, arg := range args {
+		if arg == "--help" || arg == "-h" || arg == "help" {
+			fmt.Println("agent-ledger ui - Launch local web UI")
+			fmt.Println()
+			fmt.Println("Usage:")
+			fmt.Println("  agent-ledger ui [--port <port>] [--host <host>] [--open]")
+			fmt.Println()
+			fmt.Println("Options:")
+			fmt.Println("  --port <port>  Port to run the UI server on (default: 5173)")
+			fmt.Println("  --host <host>  Host to bind the UI server to (default: localhost)")
+			fmt.Println("  --open         Automatically open browser after starting server")
+			return
+		}
+	}
+
 	// Check if we're in a git repository
 	if err := repository.MustBeInRepository(); err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -1028,20 +1051,50 @@ func handleUI() {
 		os.Exit(1)
 	}
 
-	// Parse --port flag
+	// Parse flags
 	port := 5173
-	args := os.Args[2:]
+	host := "localhost"
+	openBrowser := false
 	for i := 0; i < len(args); i++ {
-		if args[i] == "--port" && i+1 < len(args) {
-			fmt.Sscanf(args[i+1], "%d", &port)
-			i++
+		switch args[i] {
+		case "--port":
+			if i+1 < len(args) {
+				fmt.Sscanf(args[i+1], "%d", &port)
+				i++
+			}
+		case "--host":
+			if i+1 < len(args) {
+				host = args[i+1]
+				i++
+			}
+		case "--open":
+			openBrowser = true
 		}
 	}
 
 	// Start the UI server
-	server := ui.NewServer(repo, storage, port, Version)
+	server := ui.NewServer(repo, storage, port, host, Version)
 	if err := server.Start(); err != nil {
 		fmt.Printf("Error starting UI server: %v\n", err)
 		os.Exit(1)
 	}
+
+	// Auto-open browser if requested
+	if openBrowser {
+		url := fmt.Sprintf("http://%s:%d", host, port)
+		var cmd *exec.Cmd
+		switch runtime.GOOS {
+		case "windows":
+			cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+		case "darwin":
+			cmd = exec.Command("open", url)
+		default:
+			cmd = exec.Command("xdg-open", url)
+		}
+		_ = cmd.Start() // Ignore errors, browser opening is optional
+	}
+}
+
+func handleMCP() {
+	mcpinternal.RunWithLogging(Version)
 }

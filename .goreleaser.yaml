@@ -5,26 +5,12 @@ version: 2
 before:
   hooks:
     - go mod tidy
+    - cd ui/frontend && npm ci && npm run build
 
 builds:
   - id: agent-ledger
     main: ./cmd/ledger
     binary: agent-ledger
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - darwin
-      - linux
-      - windows
-    goarch:
-      - amd64
-      - arm64
-    ldflags:
-      - -s -w -X main.Version={{.Version}}
-
-  - id: ledger-mcp
-    main: ./cmd/ledger-mcp
-    binary: ledger-mcp
     env:
       - CGO_ENABLED=0
     goos:
@@ -46,7 +32,6 @@ archives:
         format: zip
     builds:
       - agent-ledger
-      - ledger-mcp
     files:
       - none*
 

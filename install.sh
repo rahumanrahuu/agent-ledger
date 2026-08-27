@@ -126,28 +126,26 @@ fi
 echo "Extracting binaries..."
 tar -xzf "$TMP_DIR/$ARCHIVE_NAME" -C "$TMP_DIR"
 
-if [ ! -f "$TMP_DIR/agent-ledger" ] || [ ! -f "$TMP_DIR/ledger-mcp" ]; then
-  echo "Error: Release archive did not contain expected executables (agent-ledger, ledger-mcp)." >&2
+if [ ! -f "$TMP_DIR/agent-ledger" ]; then
+  echo "Error: Release archive did not contain expected executable (agent-ledger)." >&2
   exit 1
 fi
 
 # Ensure user-local install directory exists
 mkdir -p "$INSTALL_DIR"
 
-echo "Installing binaries into $INSTALL_DIR..."
+echo "Installing binary into $INSTALL_DIR..."
 cp "$TMP_DIR/agent-ledger" "$INSTALL_DIR/agent-ledger"
-cp "$TMP_DIR/ledger-mcp" "$INSTALL_DIR/ledger-mcp"
-chmod +x "$INSTALL_DIR/agent-ledger" "$INSTALL_DIR/ledger-mcp"
+chmod +x "$INSTALL_DIR/agent-ledger"
 
 # Verify installation
-if [ ! -x "$INSTALL_DIR/agent-ledger" ] || [ ! -x "$INSTALL_DIR/ledger-mcp" ]; then
-  echo "Error: Installation verification failed. Files are not executable in $INSTALL_DIR." >&2
+if [ ! -x "$INSTALL_DIR/agent-ledger" ]; then
+  echo "Error: Installation verification failed. File is not executable in $INSTALL_DIR." >&2
   exit 1
 fi
 
 echo "Successfully installed Agent Ledger ($TAG)!"
-echo "  - CLI: $INSTALL_DIR/agent-ledger"
-echo "  - MCP: $INSTALL_DIR/ledger-mcp"
+echo "  - Binary: $INSTALL_DIR/agent-ledger"
 echo
 
 # Persist INSTALL_DIR in the user's shell startup file
@@ -183,5 +181,5 @@ esac
 
 echo "Verification:"
 echo "  Run 'agent-ledger --help' to get started."
-echo "  Run 'ledger-mcp --help' to view MCP server details."
+echo "  Run 'agent-ledger mcp' to start the MCP server."
 echo "  Restart your terminal or run: . \"$PATH_CONFIG\""
