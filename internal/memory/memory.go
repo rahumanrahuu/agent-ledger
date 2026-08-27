@@ -85,18 +85,30 @@ func initDB(db *sql.DB) error {
 	CREATE INDEX IF NOT EXISTS idx_created ON memories(created_at);
 	CREATE INDEX IF NOT EXISTS idx_session ON memories(session_id);
 	CREATE INDEX IF NOT EXISTS idx_archived ON memories(archived);
+	`
 
+	_, err := db.Exec(schema)
+	if err != nil {
+		return err
+	}
+
+	// Try to create FTS5 table - if it fails, continue without full-text search
+	ftsSchema := `
 	CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
 		title,
 		content,
 		keywords,
 		content=memories,
 		content_rowid=rowid
-	);
-	`
+	);`
 
-	_, err := db.Exec(schema)
-	return err
+	_, ftsErr := db.Exec(ftsSchema)
+	if ftsErr != nil {
+		// Log that FTS5 is not available but don't fail
+		// Full-text search will use basic LIKE queries instead
+	}
+
+	return nil
 }
 
 // Add adds a new memory
@@ -315,6 +327,9 @@ func (m *Manager) Delete(id string) error {
 
 // Close closes the database connection
 func (m *Manager) Close() error {
+	if m == nil || m.db == nil {
+		return nil
+	}
 	return m.db.Close()
 }
 

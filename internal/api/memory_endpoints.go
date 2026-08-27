@@ -18,15 +18,15 @@ type SearchRequest struct {
 	TimeRange   string  `json:"time_range"`
 }
 
-// SearchResponse represents search results
-type SearchResponse struct {
-	Results []SearchResultItem `json:"results"`
-	Total   int                `json:"total"`
-	Query   string             `json:"query"`
+// MemorySearchResponse represents search results
+type MemorySearchResponse struct {
+	Results []MemorySearchResultItem `json:"results"`
+	Total   int                      `json:"total"`
+	Query   string                   `json:"query"`
 }
 
-// SearchResultItem represents a single search result
-type SearchResultItem struct {
+// MemorySearchResultItem represents a single search result
+type MemorySearchResultItem struct {
 	ID         string  `json:"id"`
 	Type       string  `json:"type"`
 	Title      string  `json:"title"`
@@ -61,6 +61,12 @@ type BriefingResponse struct {
 func (a *API) HandleMemorySearch(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Check if memory manager is available
+	if a.memoryMgr == nil {
+		http.Error(w, "Memory system not available", http.StatusServiceUnavailable)
 		return
 	}
 
@@ -99,7 +105,7 @@ func (a *API) HandleMemorySearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Filter by threshold and convert results
-	var filteredResults []SearchResultItem
+	var filteredResults []MemorySearchResultItem
 	for _, result := range results {
 		if result.Score >= threshold {
 			excerpt := result.Memory.Content
@@ -107,7 +113,7 @@ func (a *API) HandleMemorySearch(w http.ResponseWriter, r *http.Request) {
 				excerpt = excerpt[:120] + "..."
 			}
 
-			filteredResults = append(filteredResults, SearchResultItem{
+			filteredResults = append(filteredResults, MemorySearchResultItem{
 				ID:        result.Memory.ID,
 				Type:      result.Memory.Type,
 				Title:     result.Memory.Title,
@@ -120,7 +126,7 @@ func (a *API) HandleMemorySearch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	response := SearchResponse{
+	response := MemorySearchResponse{
 		Results: filteredResults,
 		Total:   len(filteredResults),
 		Query:   query,
@@ -137,13 +143,19 @@ func (a *API) HandleBriefing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if memory manager is available
+	if a.memoryMgr == nil {
+		http.Error(w, "Memory system not available", http.StatusServiceUnavailable)
+		return
+	}
+
 	task := r.URL.Query().Get("task")
 	if task == "" {
 		http.Error(w, "Task parameter is required", http.StatusBadRequest)
 		return
 	}
 
-	sessionID := r.URL.Query().Get("session_id")
+	_ = r.URL.Query().Get("session_id") // sessionID declared but not used - remove this line
 
 	// Get relevant memories for this task
 	decisions, _ := a.memoryMgr.Search(task+" decision", "decision", 5)
