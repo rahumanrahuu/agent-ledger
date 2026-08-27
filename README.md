@@ -24,12 +24,11 @@ irm https://raw.githubusercontent.com/rahumanrahuu/agent-ledger/main/install.ps1
 
 ### What gets installed
 
-Two executables are placed in a user-local directory:
+A single executable is placed in a user-local directory:
 
 | Binary | Purpose |
 |---|---|
-| `agent-ledger` | CLI for session management, checkpoints, context, and semantic records |
-| `ledger-mcp` | MCP server (stdio) that connects AI coding agents to Agent Ledger |
+| `agent-ledger` | CLI for session management, checkpoints, context, semantic records, UI, and MCP server |
 
 **Install locations:**
 
@@ -63,7 +62,7 @@ $env:VERSION="v0.2.2"; irm https://raw.githubusercontent.com/rahumanrahuu/agent-
 ```bash
 agent-ledger --help
 agent-ledger --version
-ledger-mcp --help
+agent-ledger mcp --help
 ```
 
 ### PATH setup
@@ -82,15 +81,14 @@ export PATH="$HOME/.local/bin:$PATH"
 
 ### Uninstall
 
-Remove the two binaries from the install directory:
+Remove the binary from the install directory:
 
 ```bash
 # macOS / Linux
-rm ~/.local/bin/agent-ledger ~/.local/bin/ledger-mcp
+rm ~/.local/bin/agent-ledger
 
 # Windows PowerShell
 Remove-Item "$env:LOCALAPPDATA\Programs\agent-ledger\agent-ledger.exe"
-Remove-Item "$env:LOCALAPPDATA\Programs\agent-ledger\ledger-mcp.exe"
 ```
 
 ### Building from source
@@ -101,7 +99,6 @@ Requires Go 1.21+ and Git.
 git clone https://github.com/rahumanrahuu/agent-ledger.git
 cd agent-ledger
 go build -o agent-ledger ./cmd/ledger
-go build -o ledger-mcp ./cmd/ledger-mcp
 ```
 
 ---
@@ -163,7 +160,8 @@ agent-ledger handoff             Create a handoff document (--state, --changed)
 agent-ledger explain <file>      Explain development history of a file
 agent-ledger history             Show session history with details
 agent-ledger sessions            List all sessions
-agent-ledger ui [--port <port>]  Launch local web UI (with memory system)
+agent-ledger ui [--port <port>] [--host <host>] [--open]  Launch local web UI (with memory system)
+agent-ledger mcp               Start MCP server over stdio
 agent-ledger validate            Validate ledger integrity
 agent-ledger --help              Show help
 agent-ledger --version           Show version
@@ -173,7 +171,7 @@ agent-ledger --version           Show version
 
 ## MCP Setup
 
-`ledger-mcp` is a stdio-based Model Context Protocol (MCP) server. MCP clients launch it directly — you do not need to start it manually in a terminal.
+`agent-ledger mcp` is a stdio-based Model Context Protocol (MCP) server. MCP clients launch it directly — you do not need to start it manually in a terminal.
 
 The MCP server automatically locates the Git repository root by walking upward from its current working directory. No hardcoded paths are needed.
 
@@ -185,19 +183,21 @@ Add to your MCP client configuration (e.g., `mcp_config.json`):
 {
   "mcpServers": {
     "agent-ledger": {
-      "command": "ledger-mcp"
+      "command": "agent-ledger",
+      "args": ["mcp"]
     }
   }
 }
 ```
 
-This works when `ledger-mcp` is on your PATH. If it is not on PATH, use the absolute path to the binary:
+This works when `agent-ledger` is on your PATH. If it is not on PATH, use the absolute path to the binary:
 
 ```json
 {
   "mcpServers": {
     "agent-ledger": {
-      "command": "/Users/yourname/.local/bin/ledger-mcp"
+      "command": "/Users/yourname/.local/bin/agent-ledger",
+      "args": ["mcp"]
     }
   }
 }
@@ -211,7 +211,8 @@ Place in `.agents/mcp_config.json` in your workspace root:
 {
   "mcpServers": {
     "agent-ledger": {
-      "command": "ledger-mcp"
+      "command": "agent-ledger",
+      "args": ["mcp"]
     }
   }
 }
@@ -219,7 +220,7 @@ Place in `.agents/mcp_config.json` in your workspace root:
 
 ### Important
 
-- The MCP client must launch `ledger-mcp` with the working directory set to your project (or any directory within it). The server walks upward to find the repository root.
+- The MCP client must launch `agent-ledger mcp` with the working directory set to your project (or any directory within it). The server walks upward to find the repository root.
 - The target repository must have Agent Ledger initialized (`agent-ledger init`).
 - Agent Ledger operates against the current Git workspace. Each repository has its own `.agent/` directory.
 
@@ -319,8 +320,7 @@ Git repository
 | **Git** | Stores checkpoint commits as refs. Provides exact code history. |
 | **`.agent/` directory** | Stores decisions, discoveries, failures, constraints, sessions, handoffs as human-readable Markdown and JSON. |
 | **Context compiler** | Combines Git facts and semantic records into structured onboarding context. |
-| **CLI (`agent-ledger`)** | Command-line interface for direct usage. |
-| **MCP server (`ledger-mcp`)** | Stdio MCP interface so existing coding agents can use Agent Ledger. |
+| **CLI (`agent-ledger`)** | Command-line interface for direct usage, UI server, and MCP interface. |
 
 ### The `.agent/` directory
 
@@ -369,7 +369,7 @@ agent-ledger_v0.2.2_windows_amd64.zip
 checksums.txt
 ```
 
-Each archive contains `agent-ledger` and `ledger-mcp` (with `.exe` on Windows).
+Each archive contains `agent-ledger` (with `.exe` on Windows).
 
 ### How releases are generated
 
@@ -380,7 +380,7 @@ git tag v0.2.2
 git push origin v0.2.2
 ```
 
-The workflow runs `go test ./...`, then builds and packages binaries for all platforms using GoReleaser.
+The workflow runs frontend build (`npm install && npm run build`), `go test ./...`, then builds and packages binaries for all platforms using GoReleaser.
 
 ### Getting updates
 
@@ -402,13 +402,14 @@ irm https://raw.githubusercontent.com/rahumanrahuu/agent-ledger/main/install.ps1
 agent-ledger/
 ├── cmd/
 │   ├── ledger/              # CLI entry point (installs as agent-ledger)
-│   └── ledger-mcp/          # MCP server entry point
+│   └── ledger-mcp/          # Legacy MCP server entry point (no longer shipped)
 ├── internal/
 │   ├── checkpoint/          # Git ref checkpoint management
 │   ├── context/             # Context compilation and formatting
 │   ├── events/              # Semantic event creation and querying
 │   ├── git/                 # Git CLI interface (plumbing commands)
 │   ├── history/             # Session history aggregation
+│   ├── mcp/                 # MCP server logic (integrated into main binary)
 │   ├── memory/              # Advanced memory system (multi-agent, real-time)
 │   ├── repository/          # Git repository detection (upward walking)
 │   ├── session/             # Session lifecycle management
