@@ -166,7 +166,31 @@ try {
     $UserPathEntries = @($UserPath -split ";" | Where-Object { $_ })
     if ($UserPathEntries -notcontains $InstallDir) {
         Write-Host "Adding $InstallDir to your User PATH..."
-        [System.Environment]::SetEnvironmentVariable("Path", (($UserPathEntries + $InstallDir) -join ";"), "User")
+        $NewUserPath = (($UserPathEntries + $InstallDir) -join ";")
+        [System.Environment]::SetEnvironmentVariable("Path", $NewUserPath, "User")
+
+        # Broadcast environment change to all running processes so they pick up the new PATH immediately
+        try {
+            Add-Type -Name WinAPI -Namespace AgentLedger -MemberDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class NativeMethods {
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    public static extern IntPtr SendMessageTimeout(
+        IntPtr hWnd, uint Msg, IntPtr wParam, string lParam,
+        uint fuFlags, uint uTimeout, out IntPtr lpdwResult);
+}
+"@
+            $HWND_BROADCAST = 0xFFFF
+            $WM_SETTINGCHANGE = 0x1A
+            $SMTO_ABORTIFHUNG = 0x0002
+            $null = [AgentLedger.NativeMethods]::SendMessageTimeout(
+                $HWND_BROADCAST, $WM_SETTINGCHANGE, [IntPtr]::Zero, "Environment",
+                $SMTO_ABORTIFHUNG, 5000, [ref]0)
+            Write-Host "Broadcasted PATH change to running applications." -ForegroundColor Cyan
+        } catch {
+            Write-Host "Note: Could not broadcast PATH change to running apps (may need admin)." -ForegroundColor Yellow
+        }
     }
 
     # Make commands available in the current session immediately
