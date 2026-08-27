@@ -32,9 +32,9 @@ func NewAPI(repo *repository.Repository, st *storage.Storage, version string) *A
 	checkpointMgr := checkpoint.NewManager(st)
 	historyMgr := history.NewManager(sessionMgr, checkpointMgr, st)
 	eventsMgr := events.NewManager(st)
-	
+
 	// Initialize memory manager - handle potential errors gracefully
-	memoryMgr, err := memory.NewManager(repo.Root())
+	memoryMgr, err := memory.NewManager(repo.Root)
 	if err != nil {
 		// Log error but don't fail - memory features will be disabled
 		memoryMgr = nil
@@ -458,6 +458,35 @@ type SearchResult struct {
 	Title   string `json:"title"`
 	Excerpt string `json:"excerpt"`
 	Path    string `json:"path"`
+}
+
+// GetMemories lists or searches the vector-backed memory store. Search results
+// are flattened to Memory values so list and search responses share one stable
+// JSON shape for API clients.
+func (a *API) GetMemories(query, memoryType string, limit int) ([]memory.Memory, error) {
+	if a.memoryMgr == nil {
+		return []memory.Memory{}, nil
+	}
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	if query == "" {
+		memories, err := a.memoryMgr.List(memoryType, limit)
+		if memories == nil {
+			memories = []memory.Memory{}
+		}
+		return memories, err
+	}
+
+	results, err := a.memoryMgr.Search(query, memoryType, limit)
+	if err != nil {
+		return nil, err
+	}
+	memories := make([]memory.Memory, 0, len(results))
+	for _, result := range results {
+		memories = append(memories, result.Memory)
+	}
+	return memories, nil
 }
 
 // Search searches across all entities

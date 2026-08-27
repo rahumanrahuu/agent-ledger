@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // Memory represents a single memory record
@@ -50,10 +50,13 @@ func NewManager(root string) (*Manager, error) {
 	}
 
 	// Open database
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open memory database: %w", err)
 	}
+	// SQLite permits a single writer. Serializing access prevents transient
+	// "database is locked" failures during concurrent agent updates.
+	db.SetMaxOpenConns(1)
 
 	// Create tables
 	if err := initDB(db); err != nil {
@@ -171,32 +174,28 @@ func (m *Manager) Get(id string) (*Memory, error) {
 func (m *Manager) Search(query string, memType string, limit int) ([]SearchResult, error) {
 	var rows *sql.Rows
 	var err error
+	pattern := "%" + strings.ToLower(strings.TrimSpace(query)) + "%"
 
 	if memType != "" && memType != "all" {
 		rows, err = m.db.Query(`
-			SELECT m.id, m.type, m.title, m.content, m.embedding, m.keywords,
-			       m.created_at, m.updated_at, m.importance, m.session_id, m.path
-			FROM memories m
-			WHERE m.id IN (
-				SELECT content_rowid FROM memories_fts WHERE memories_fts MATCH ?
-			)
-			AND m.type = ?
-			AND m.archived = 0
-			ORDER BY m.created_at DESC
+			SELECT id, type, title, content, embedding, keywords,
+			       created_at, updated_at, importance, session_id, path
+			FROM memories
+			WHERE (LOWER(title) LIKE ? OR LOWER(content) LIKE ? OR LOWER(keywords) LIKE ?)
+			AND type = ? AND archived = 0
+			ORDER BY created_at DESC
 			LIMIT ?
-		`, query, memType, limit)
+		`, pattern, pattern, pattern, memType, limit)
 	} else {
 		rows, err = m.db.Query(`
-			SELECT m.id, m.type, m.title, m.content, m.embedding, m.keywords,
-			       m.created_at, m.updated_at, m.importance, m.session_id, m.path
-			FROM memories m
-			WHERE m.id IN (
-				SELECT content_rowid FROM memories_fts WHERE memories_fts MATCH ?
-			)
-			AND m.archived = 0
-			ORDER BY m.created_at DESC
+			SELECT id, type, title, content, embedding, keywords,
+			       created_at, updated_at, importance, session_id, path
+			FROM memories
+			WHERE (LOWER(title) LIKE ? OR LOWER(content) LIKE ? OR LOWER(keywords) LIKE ?)
+			AND archived = 0
+			ORDER BY created_at DESC
 			LIMIT ?
-		`, query, limit)
+		`, pattern, pattern, pattern, limit)
 	}
 
 	if err != nil {
