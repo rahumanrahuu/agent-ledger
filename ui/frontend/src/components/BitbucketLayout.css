@@ -143,6 +143,11 @@
   transition: all 0.2s;
   cursor: pointer;
   border-left: 2px solid transparent;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
 }
 
 .bb-nav-item:hover {
