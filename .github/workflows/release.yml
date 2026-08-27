@@ -30,6 +30,12 @@ jobs:
           cache: "npm"
           cache-dependency-path: "ui/frontend/package.json"
 
+      - name: Build frontend
+        run: |
+          cd ui/frontend
+          npm ci
+          npm run build
+
       - name: Run test suite
         run: go test -v ./...
 

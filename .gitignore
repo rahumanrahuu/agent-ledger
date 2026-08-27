@@ -34,7 +34,8 @@ npm-debug.log
 
 # Frontend build
 bin/
-ui/dist/
+ui/dist/*
+!ui/dist/.gitkeep
 
 # Internal project documentation (not for open-source)
 PHASES_3_5_SUMMARY.md
