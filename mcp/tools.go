@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"agent-ledger/internal/events"
 	"agent-ledger/internal/git"
+	"agent-ledger/internal/memory"
 	"agent-ledger/internal/repository"
 )
 
@@ -159,6 +161,7 @@ var (
 		},
 		"required": ["current_state", "what_changed"]
 	}`)
+	createMemorySchema = json.RawMessage(`{"type":"object","properties":{"type":{"type":"string"},"title":{"type":"string"},"content":{"type":"string"},"keywords":{"type":"string"},"importance":{"type":"number"}},"required":["type","title","content"]}`)
 )
 
 // RegisterTools registers all Agent Ledger MCP tools.
@@ -228,6 +231,7 @@ func (m *Manager) RegisterTools(server *mcp.Server) error {
 		Description: "Create a handoff for the next development session",
 		InputSchema: createHandoffSchema,
 	}, m.handleCreateHandoff)
+	server.AddTool(&mcp.Tool{Name: "create_memory", Description: "Store durable project knowledge", InputSchema: createMemorySchema}, m.handleCreateMemory)
 
 	server.AddTool(&mcp.Tool{
 		Name:        "validate",
@@ -236,6 +240,18 @@ func (m *Manager) RegisterTools(server *mcp.Server) error {
 	}, m.handleValidate)
 
 	return nil
+}
+
+func (m *Manager) handleCreateMemory(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	typeName, title, content := m.getStringParam(req, "type"), m.getStringParam(req, "title"), m.getStringParam(req, "content")
+	if typeName == "" || title == "" || content == "" { return m.errorResult("Missing required parameters: type, title, and content"), nil }
+	importance := 0.5; var args map[string]json.RawMessage
+	if req != nil && req.Params != nil && json.Unmarshal(req.Params.Arguments, &args) == nil { _ = json.Unmarshal(args["importance"], &importance) }
+	repo, err := repository.Detect(); if err != nil { return m.errorResult(err.Error()), nil }
+	mgr, err := memory.NewManager(repo.Root); if err != nil { return m.errorResult(err.Error()), nil }; defer mgr.Close()
+	sessionID := ""; if current, err := m.sessionManager.GetCurrent(); err == nil { sessionID = current.ID }
+	id := uuid.New().String(); err = mgr.Add(memory.Memory{ID:id, Type:typeName, Title:title, Content:content, Keywords:m.getStringParam(req,"keywords"), Importance:importance, SessionID:sessionID, Path:"mcp://create_memory"})
+	if err != nil { return m.errorResult(err.Error()), nil }; return m.textResult(fmt.Sprintf("Memory created successfully\nID: %s", id)), nil
 }
 
 // handleStartSession starts a new Agent Ledger session.
