@@ -5,7 +5,10 @@ version: 2
 before:
   hooks:
     - go mod tidy
-    - cd ui/frontend && npm ci && npm run build && node -e "require('fs').mkdirSync('../dist',{recursive:true}); require('fs').writeFileSync('../dist/.gitkeep','')"
+    - cmd: npm ci
+      dir: ui/frontend
+    - cmd: npm run build
+      dir: ui/frontend
 
 builds:
   - id: agent-ledger
