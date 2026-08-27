@@ -4,7 +4,7 @@ version: 2
 
 before:
   hooks:
-    - go mod tidy
+    - cmd: go mod tidy
     - cmd: npm ci
       dir: ui/frontend
     - cmd: npm run build
