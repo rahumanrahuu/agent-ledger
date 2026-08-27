@@ -36,6 +36,9 @@ jobs:
           npm ci
           npm run build
 
+      - name: Ensure dist placeholder for GoReleaser dirty check
+        run: node -e "require('fs').mkdirSync('ui/dist',{recursive:true}); require('fs').writeFileSync('ui/dist/.gitkeep','')"
+
       - name: Run test suite
         run: go test -v ./...
 

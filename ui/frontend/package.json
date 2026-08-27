@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
+    "postbuild": "node -e \"require('fs').mkdirSync('../dist',{recursive:true}); require('fs').writeFileSync('../dist/.gitkeep','')\"",
     "preview": "vite preview",
     "format": "oxfmt"
   },
