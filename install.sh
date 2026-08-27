@@ -174,7 +174,7 @@ if [ ! -f "$PATH_CONFIG" ] || ! grep -Fq "$INSTALL_DIR" "$PATH_CONFIG"; then
 fi
 
 case ":$PATH:" in
-  *:"$INSTALL_DIR":*)ledger-mcp --help'
+  *:"$INSTALL_DIR":*)
     ;;
   *)
     export PATH="$INSTALL_DIR:$PATH"
