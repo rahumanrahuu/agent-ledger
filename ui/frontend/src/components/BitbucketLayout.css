@@ -1,0 +1,233 @@
+@import '../styles/bitbucket-theme.css';
+
+.bb-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--bb-bg);
+  color: var(--bb-text);
+}
+
+/* Top Navigation */
+.bb-topnav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 56px;
+  background-color: var(--bb-bg-elevated);
+  border-bottom: 1px solid var(--bb-border);
+  padding: 0 var(--bb-spacing-lg);
+  box-shadow: var(--bb-shadow-sm);
+  z-index: 100;
+}
+
+.bb-topnav-left {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-spacing-lg);
+  flex: 1;
+}
+
+.bb-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--bb-text);
+  padding: var(--bb-spacing-sm);
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.bb-hamburger:hover {
+  background-color: var(--bb-bg-tertiary);
+}
+
+.bb-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-spacing-sm);
+  font-size: var(--bb-font-size-lg);
+  font-weight: 600;
+  color: var(--bb-primary);
+  white-space: nowrap;
+}
+
+.bb-topnav-right {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-spacing-md);
+}
+
+.bb-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--bb-text-secondary);
+  padding: var(--bb-spacing-sm);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.bb-icon-btn:hover {
+  background-color: var(--bb-bg-tertiary);
+  color: var(--bb-primary);
+}
+
+.bb-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--bb-bg-tertiary);
+  cursor: pointer;
+}
+
+/* Layout Container */
+.bb-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.bb-sidebar {
+  width: 240px;
+  background-color: var(--bb-bg-elevated);
+  border-right: 1px solid var(--bb-border);
+  overflow-y: auto;
+  transition: width 0.3s, margin-left 0.3s;
+}
+
+.bb-sidebar.closed {
+  width: 0;
+  border-right: none;
+}
+
+.bb-sidebar-content {
+  padding: var(--bb-spacing-lg) 0;
+}
+
+.bb-sidebar-section {
+  margin-bottom: var(--bb-spacing-xl);
+}
+
+.bb-sidebar-section:first-child {
+  margin-top: 0;
+}
+
+.bb-sidebar-section-title {
+  font-size: var(--bb-font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--bb-text-tertiary);
+  padding: 0 var(--bb-spacing-lg) var(--bb-spacing-md);
+  letter-spacing: 0.5px;
+}
+
+.bb-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.bb-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--bb-spacing-md);
+  padding: var(--bb-spacing-md) var(--bb-spacing-lg);
+  color: var(--bb-text-secondary);
+  text-decoration: none;
+  font-size: var(--bb-font-size-sm);
+  transition: all 0.2s;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+}
+
+.bb-nav-item:hover {
+  background-color: var(--bb-bg-tertiary);
+  color: var(--bb-text);
+}
+
+.bb-nav-item.active {
+  background-color: var(--bb-primary-light);
+  color: var(--bb-primary);
+  border-left-color: var(--bb-primary);
+  font-weight: 600;
+}
+
+.bb-nav-item svg {
+  flex-shrink: 0;
+}
+
+/* Main Content Area */
+.bb-main {
+  flex: 1;
+  overflow: auto;
+  background-color: var(--bb-bg);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .bb-hamburger {
+    display: flex;
+  }
+
+  .bb-sidebar {
+    position: absolute;
+    left: 0;
+    top: 56px;
+    height: calc(100vh - 56px);
+    z-index: 50;
+  }
+
+  .bb-sidebar.closed {
+    transform: translateX(-100%);
+    width: 240px;
+  }
+
+  .bb-topnav {
+    padding: 0 var(--bb-spacing-md);
+  }
+
+  .bb-logo span {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .bb-topnav {
+    height: 48px;
+    padding: 0 var(--bb-spacing-sm);
+  }
+
+  .bb-topnav-left {
+    gap: var(--bb-spacing-sm);
+  }
+
+  .bb-topnav-right {
+    gap: var(--bb-spacing-sm);
+  }
+
+  .bb-sidebar {
+    width: 220px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .bb-layout {
+    background-color: var(--bb-bg-dark-primary);
+    color: var(--bb-text-light);
+  }
+
+  .bb-topnav,
+  .bb-sidebar {
+    background-color: var(--bb-bg-dark-secondary);
+  }
+
+  .bb-nav-item.active {
+    background-color: rgba(0, 82, 204, 0.15);
+  }
+}

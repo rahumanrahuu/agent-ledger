@@ -49,64 +49,40 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const fetchOverview = async () => {
-      try {
-        const response = await fetch('/api/overview')
-        if (!response.ok) throw new Error('Failed to fetch overview')
-        const data = await response.json()
+    fetch('/api/overview')
+      .then(r => r.json())
+      .then(data => {
         setOverview(data)
-      } catch (err) {
-        console.error('Failed to load overview:', err)
-      } finally {
         setLoading(false)
-      }
-    }
-
-    fetchOverview()
+      })
   }, [revision])
 
-  const renderView = () => {
+  const renderContent = () => {
     switch (currentView) {
       case 'overview':
-        return <Overview data={overview} onSelect={setSelectedItem} onNavigate={setCurrentView} liveStatus={liveStatus} revision={revision} />
+        return <Overview data={overview} />
       case 'sessions':
-        return <Sessions onSelect={setSelectedItem} revision={revision} />
+        return <Sessions />
       case 'timeline':
-        return <Timeline onSelect={setSelectedItem} revision={revision} />
+        return <Timeline />
       case 'memories':
         return <BitbucketMemoryPanel />
-      case 'knowledge-graph':
-        return <KnowledgeGraph revision={revision} onNodeClick={setSelectedItem} />
+      case 'graph':
+        return <KnowledgeGraph />
       default:
-        return <Overview data={overview} onSelect={setSelectedItem} />
+        return <Overview data={overview} />
     }
-  }
-
-  if (loading) {
-    return (
-      <BitbucketLayout>
-        <div className="bb-loading-page">
-          <div className="bb-spinner"></div>
-          <p>Loading Agent Ledger...</p>
-        </div>
-      </BitbucketLayout>
-    )
   }
 
   return (
     <BitbucketLayout>
-      <div className="bb-app-content">
-        <div className="bb-view-container">
-          {renderView()}
-        </div>
-        {selectedItem && (
-          <div className="bb-inspector-container">
-            <Inspector
-              item={selectedItem}
-              onClose={() => setSelectedItem(null)}
-            />
-          </div>
-        )}
+      <div className="bb-content-wrapper">
+        <main className="bb-content-main">
+          {renderContent()}
+        </main>
+        <aside className="bb-content-inspector">
+          <Inspector selectedItem={selectedItem} liveStatus={liveStatus} />
+        </aside>
       </div>
     </BitbucketLayout>
   )

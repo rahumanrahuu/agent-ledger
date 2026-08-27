@@ -1,0 +1,118 @@
+/* Bitbucket-inspired theme for Agent Ledger */
+
+:root {
+  /* Bitbucket color palette */
+  --bb-primary: #0052cc;
+  --bb-primary-hover: #003fa8;
+  --bb-primary-light: #deebff;
+  --bb-secondary: #626f86;
+  --bb-secondary-light: #738496;
+  --bb-success: #216e4e;
+  --bb-success-light: #dffcf0;
+  --bb-warning: #974f0c;
+  --bb-warning-light: #ffeaa7;
+  --bb-danger: #ae2a19;
+  --bb-danger-light: #ffeceb;
+
+  /* Backgrounds */
+  --bb-bg-primary: #ffffff;
+  --bb-bg-secondary: #f8f9fa;
+  --bb-bg-tertiary: #f3f5f7;
+  --bb-bg-overlay: rgba(0, 0, 0, 0.5);
+
+  /* Dark theme support */
+  --bb-bg-dark-primary: #0f101a;
+  --bb-bg-dark-secondary: #1d2126;
+  --bb-bg-dark-tertiary: #282e38;
+
+  /* Text colors */
+  --bb-text-primary: #161b22;
+  --bb-text-secondary: #626f86;
+  --bb-text-tertiary: #738496;
+  --bb-text-light: #ffffff;
+
+  /* Borders */
+  --bb-border-color: #dfe1e6;
+  --bb-border-dark: #424e5e;
+
+  /* Shadows */
+  --bb-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --bb-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --bb-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.12);
+
+  /* Spacing */
+  --bb-spacing-xs: 4px;
+  --bb-spacing-sm: 8px;
+  --bb-spacing-md: 12px;
+  --bb-spacing-lg: 16px;
+  --bb-spacing-xl: 24px;
+  --bb-spacing-xxl: 32px;
+
+  /* Typography */
+  --bb-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  --bb-font-mono: 'Monaco', 'Courier New', monospace;
+  --bb-font-size-xs: 12px;
+  --bb-font-size-sm: 13px;
+  --bb-font-size-md: 14px;
+  --bb-font-size-lg: 16px;
+  --bb-font-size-xl: 18px;
+  --bb-font-size-xxl: 24px;
+
+  /* Line height */
+  --bb-line-height-tight: 1.2;
+  --bb-line-height-normal: 1.5;
+  --bb-line-height-relaxed: 1.75;
+}
+
+/* Light theme */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bb-bg: var(--bb-bg-primary);
+    --bb-bg-elevated: var(--bb-bg-secondary);
+    --bb-text: var(--bb-text-primary);
+    --bb-text-subtle: var(--bb-text-secondary);
+    --bb-border: var(--bb-border-color);
+  }
+}
+
+/* Dark theme */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bb-bg: var(--bb-bg-dark-primary);
+    --bb-bg-elevated: var(--bb-bg-dark-secondary);
+    --bb-text: var(--bb-text-light);
+    --bb-text-subtle: var(--bb-text-tertiary);
+    --bb-border: var(--bb-border-dark);
+  }
+}
+
+* {
+  font-family: var(--bb-font-family);
+}
+
+body {
+  background-color: var(--bb-bg);
+  color: var(--bb-text);
+  margin: 0;
+  padding: 0;
+  line-height: var(--bb-line-height-normal);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bb-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #999;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
