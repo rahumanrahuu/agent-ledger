@@ -146,7 +146,7 @@ func checkConstraintRule(constraint *Constraint, filePath string, lines []string
 	// Example: rate-limit constraint
 	if constraint.ID == "rate-limit" {
 		// Check for hardcoded rate limits that don't match constraint
-		for i, line := range lines {
+		for _, line := range lines {
 			if strings.Contains(line, "8") && strings.Contains(line, "day") {
 				continue // This is correct
 			}

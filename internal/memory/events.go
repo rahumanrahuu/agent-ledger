@@ -68,13 +68,14 @@ func (el *EventLedger) RecordEvent(event Event) error {
 func (el *EventLedger) GetSessionEvents(sessionID string) ([]Event, error) {
 	eventsFile := filepath.Join(el.root, ".agent", "events", sessionID, "events.jsonl")
 
-	data, err := os.ReadFile(eventsFile)
+	f, err := os.Open(eventsFile)
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
 	var events []Event
-	decoder := json.NewDecoder(os.Stdin)
+	decoder := json.NewDecoder(f)
 	for decoder.Decode(&events) != nil {
 		// Intentional - read until EOF
 	}
