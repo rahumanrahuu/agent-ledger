@@ -150,19 +150,38 @@ echo "  - CLI: $INSTALL_DIR/agent-ledger"
 echo "  - MCP: $INSTALL_DIR/ledger-mcp"
 echo
 
-# Check if INSTALL_DIR is in PATH
-case ":$PATH:" in
-  *:"$INSTALL_DIR":*)
-    echo "Verification:"
-    echo "  Run 'agent-ledger --help' to get started."
-    echo "  Run 'ledger-mcp --help' to view MCP server details."
+# Persist INSTALL_DIR in the user's shell startup file
+case "${SHELL:-}" in
+  */zsh)
+    PATH_CONFIG="${ZDOTDIR:-$HOME}/.zshrc"
+    ;;
+  */bash)
+    if [ -f "$HOME/.bash_profile" ]; then
+      PATH_CONFIG="$HOME/.bash_profile"
+    else
+      PATH_CONFIG="$HOME/.bashrc"
+    fi
     ;;
   *)
-    echo "Notice: $INSTALL_DIR is not currently in your PATH."
-    echo "Add it to your environment by running:"
-    echo
-    echo "  export PATH=\"$INSTALL_DIR:\$PATH\""
-    echo
-    echo "To make this permanent, add the line above to your ~/.bashrc, ~/.zshrc, or ~/.profile."
+    PATH_CONFIG="$HOME/.profile"
     ;;
 esac
+
+PATH_EXPORT="export PATH=\"$INSTALL_DIR:\$PATH\""
+if [ ! -f "$PATH_CONFIG" ] || ! grep -Fq "$INSTALL_DIR" "$PATH_CONFIG"; then
+  printf '\n# Agent Ledger\n%s\n' "$PATH_EXPORT" >> "$PATH_CONFIG"
+  echo "Added $INSTALL_DIR to PATH in $PATH_CONFIG."
+fi
+
+case ":$PATH:" in
+  *:"$INSTALL_DIR":*)
+    ;;
+  *)
+    export PATH="$INSTALL_DIR:$PATH"
+    ;;
+esac
+
+echo "Verification:"
+echo "  Run 'agent-ledger --help' to get started."
+echo "  Run 'ledger-mcp --help' to view MCP server details."
+echo "  Restart your terminal or run: . \"$PATH_CONFIG\""

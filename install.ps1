@@ -161,17 +161,18 @@ try {
     Write-Host "  - MCP: $InstalledLedgerMcp"
     Write-Host ""
 
-    # Ensure InstallDir is on the User PATH (persists across sessions)
+    # Ensure InstallDir is on the User PATH (persists across sessions and reboots)
     $UserPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
-    if ($UserPath -notlike "*$InstallDir*") {
+    $UserPathEntries = @($UserPath -split ";" | Where-Object { $_ })
+    if ($UserPathEntries -notcontains $InstallDir) {
         Write-Host "Adding $InstallDir to your User PATH..."
-        $NewPath = if ($UserPath) { "$UserPath;$InstallDir" } else { $InstallDir }
-        [System.Environment]::SetEnvironmentVariable("Path", $NewPath, "User")
+        [System.Environment]::SetEnvironmentVariable("Path", (($UserPathEntries + $InstallDir) -join ";"), "User")
     }
 
     # Make commands available in the current session immediately
-    if (($env:Path -split ";") -notcontains $InstallDir) {
-        $env:Path = "$env:Path;$InstallDir"
+    $CurrentPathEntries = @($env:Path -split ";" | Where-Object { $_ })
+    if ($CurrentPathEntries -notcontains $InstallDir) {
+        $env:Path = (($CurrentPathEntries + $InstallDir) -join ";")
     }
 
     Write-Host "Verification:"
