@@ -1,14 +1,12 @@
-# GoReleaser configuration for Agent Ledger
-# https://goreleaser.com
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+
 version: 2
 
 before:
   hooks:
-    - cmd: go mod tidy
-    - cmd: npm ci
-      dir: ui/frontend
-    - cmd: npm run build
-      dir: ui/frontend
+    - go mod tidy
+    - sh -c "cd ui/frontend && npm ci"
+    - sh -c "cd ui/frontend && npm run build"
 
 builds:
   - id: agent-ledger
@@ -29,11 +27,13 @@ builds:
 archives:
   - id: default
     name_template: "agent-ledger_{{ .Tag }}_{{ .Os }}_{{ .Arch }}"
-    format: tar.gz
+    formats:
+      - tar.gz
     format_overrides:
       - goos: windows
-        format: zip
-    builds:
+        formats:
+          - zip
+    ids:
       - agent-ledger
     files:
       - none*
