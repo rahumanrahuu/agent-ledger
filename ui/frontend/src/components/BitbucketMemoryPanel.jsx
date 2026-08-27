@@ -33,9 +33,9 @@ export default function BitbucketMemoryPanel() {
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&limit=20`)
+      const response = await fetch(`/api/memories?q=${encodeURIComponent(searchQuery)}&type=${filterType}&limit=20`)
       const data = await response.json()
-      setMemories(data?.results || [])
+      setMemories(data || [])
     } catch (error) {
       console.error('Search failed:', error)
     } finally {
@@ -151,7 +151,6 @@ export default function BitbucketMemoryPanel() {
                 <th>Type</th>
                 <th>Created</th>
                 <th>Session</th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -175,32 +174,6 @@ export default function BitbucketMemoryPanel() {
                   </td>
                   <td className="bb-table-cell-session">
                     <code className="bb-code">{memory.session_id?.slice(0, 8)}</code>
-                  </td>
-                  <td className="bb-table-cell-actions">
-                    <button
-                      className="bb-icon-btn-small"
-                      aria-label="View"
-                      title="View details"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 16 16">
-                        <path
-                          d="M8 3C4.5 3 1.7 5.3 1 8c.7 2.7 3.5 5 7 5s6.3-2.3 7-5c-.7-2.7-3.5-5-7-5zm0 8c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      className="bb-icon-btn-small"
-                      aria-label="Delete"
-                      title="Delete"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 16 16">
-                        <path
-                          d="M2 2v12h12V2H2zm3 2h6v8H5V4z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                    </button>
                   </td>
                 </tr>
               ))}

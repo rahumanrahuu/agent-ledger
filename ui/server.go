@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -53,6 +54,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/events", s.handleEvents)
 	mux.HandleFunc("/api/graph", s.handleGraph)
 	mux.HandleFunc("/api/search", s.handleSearch)
+	mux.HandleFunc("/api/memories", s.handleMemories)
 	mux.HandleFunc("/api/live", s.handleLive)
 
 	// Frontend - will be served from embedded assets in the future
@@ -72,6 +74,23 @@ func (s *Server) Start() error {
 	go s.watchLedger()
 
 	return http.Serve(listener, mux)
+}
+
+// handleMemories serves a stable list response for both browsing and searching
+// the memory store.
+func (s *Server) handleMemories(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	memories, err := s.api.GetMemories(r.URL.Query().Get("q"), r.URL.Query().Get("type"), limit)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(memories)
 }
 
 var liveUpgrader = websocket.Upgrader{

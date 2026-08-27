@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -62,7 +63,7 @@ func GetRepositoryRoot() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(output), nil
+	return filepath.Clean(strings.TrimSpace(output)), nil
 }
 
 // GetRepositoryRootInDir returns the root directory of the git repository containing dir
@@ -71,7 +72,7 @@ func GetRepositoryRootInDir(dir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(output), nil
+	return filepath.Clean(strings.TrimSpace(output)), nil
 }
 
 // GetCurrentBranch returns the current branch name

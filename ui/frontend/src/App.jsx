@@ -94,7 +94,7 @@ function App() {
   }
 
   return (
-    <BitbucketLayout>
+    <BitbucketLayout onNavigate={setCurrentView} currentView={currentView}>
       <div className="bb-app-content">
         <div className="bb-view-container">
           {renderView()}
