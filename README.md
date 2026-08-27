@@ -2,6 +2,8 @@
 
 A local-first, Git-native system that preserves development history and context across AI coding-agent sessions. Different agents can continue work without losing previous decisions, discoveries, failures, constraints, or code history.
 
+Agent Ledger includes an advanced **memory system** for multi-agent coordination, real-time updates, and intelligent context management. It features a modern web UI with Bitbucket-inspired design for professional development workflows.
+
 Agent Ledger does **not** provide its own AI model or coding agent. Existing coding agents (Claude Code, Cursor, Copilot, Gemini, etc.) provide the reasoning. Agent Ledger provides persistent development context and history.
 
 ---
@@ -161,6 +163,7 @@ agent-ledger handoff             Create a handoff document (--state, --changed)
 agent-ledger explain <file>      Explain development history of a file
 agent-ledger history             Show session history with details
 agent-ledger sessions            List all sessions
+agent-ledger ui [--port <port>]  Launch local web UI (with memory system)
 agent-ledger validate            Validate ledger integrity
 agent-ledger --help              Show help
 agent-ledger --version           Show version
@@ -406,12 +409,14 @@ agent-ledger/
 │   ├── events/              # Semantic event creation and querying
 │   ├── git/                 # Git CLI interface (plumbing commands)
 │   ├── history/             # Session history aggregation
+│   ├── memory/              # Advanced memory system (multi-agent, real-time)
 │   ├── repository/          # Git repository detection (upward walking)
 │   ├── session/             # Session lifecycle management
 │   └── storage/             # Local file storage (.agent/)
 ├── mcp/
 │   ├── resources.go         # MCP resource handlers
 │   └── tools.go             # MCP tool handlers
+├── ui/frontend/             # Modern web UI with Bitbucket-inspired design
 ├── .github/workflows/       # GitHub Actions release workflow
 ├── .goreleaser.yaml          # GoReleaser cross-platform build config
 ├── install.sh               # Unix installer (macOS + Linux)
@@ -447,5 +452,33 @@ go test ./...
 - **Simple context compilation**: Rule-based keyword matching for task relevance, not AI-enhanced
 - **Basic file explanation**: Uses Git history, not semantic analysis
 - **Manual event recording**: Agents must explicitly call CLI/MCP tools to record knowledge
-- **No multi-agent isolation**: Single active session at a time
 - **No automatic session cleanup**: Stale active sessions are not auto-expired
+
+---
+
+## Memory System & Web UI
+
+Agent Ledger includes an advanced memory system for enhanced multi-agent collaboration:
+
+### Memory Features
+- **Multi-agent coordination**: Multiple agents can work simultaneously with shared memory
+- **Real-time updates**: Live synchronization of agent state and context
+- **Intelligent constraints**: Automatic constraint management and validation
+- **Event tracking**: Comprehensive logging of agent actions and decisions
+- **Memory search**: Fast search across all stored agent memories
+
+### Web UI
+Launch the modern web interface:
+
+```bash
+agent-ledger ui --port 8080
+```
+
+Features:
+- **Bitbucket-inspired design**: Professional, familiar interface
+- **Memory management panels**: Interactive memory exploration
+- **Briefing system**: Agent handoff and status briefings  
+- **Real-time updates**: Live updates as agents work
+- **Memory search**: Advanced search and filtering capabilities
+
+The UI provides a comprehensive view of your development session history, agent memories, and project context in an intuitive web interface.

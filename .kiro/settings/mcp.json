@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "agent-ledger": {
+      "command": "ledger-mcp",
+      "args": [],
+      "env": {},
+      "disabled": false
+    }
+  }
+}
