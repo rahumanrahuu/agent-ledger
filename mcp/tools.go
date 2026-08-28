@@ -470,7 +470,7 @@ func (m *Manager) handleRecordDecision(
 
 	eventsManager := events.NewManager(m.storage)
 
-	_, err = eventsManager.CreateDecision(
+	decisionRecord, err := eventsManager.CreateDecision(
 		currentSession.ID,
 		title,
 		decision,
@@ -480,6 +480,37 @@ func (m *Manager) handleRecordDecision(
 	)
 	if err != nil {
 		return m.errorResult(fmt.Sprintf("Error creating decision: %v", err)), nil
+	}
+
+	repo, err := repository.Detect()
+	if err != nil {
+		return m.errorResult(fmt.Sprintf("Error detecting repository: %v", err)), nil
+	}
+
+	mgr, err := memory.NewManager(repo.Root)
+	if err != nil {
+		return m.errorResult(fmt.Sprintf("Error initializing memory manager: %v", err)), nil
+	}
+	defer mgr.Close()
+
+	content := decision
+	if rationale != "" {
+		content = decision + `
+
+Rationale: ` + rationale
+	}
+
+	err = mgr.Add(memory.Memory{
+		ID:         decisionRecord.ID,
+		Type:       "decision",
+		Title:      title,
+		Content:    content,
+		SessionID:  currentSession.ID,
+		Path:       "mcp://record_decision",
+		Importance: 0.7,
+	})
+	if err != nil {
+		return m.errorResult(fmt.Sprintf("Error saving decision to memory: %v", err)), nil
 	}
 
 	return m.textResult("Decision recorded successfully"), nil
@@ -504,7 +535,7 @@ func (m *Manager) handleRecordDiscovery(
 
 	eventsManager := events.NewManager(m.storage)
 
-	_, err = eventsManager.CreateDiscovery(
+	discoveryRecord, err := eventsManager.CreateDiscovery(
 		currentSession.ID,
 		title,
 		finding,
@@ -513,6 +544,30 @@ func (m *Manager) handleRecordDiscovery(
 	)
 	if err != nil {
 		return m.errorResult(fmt.Sprintf("Error creating discovery: %v", err)), nil
+	}
+
+	repo, err := repository.Detect()
+	if err != nil {
+		return m.errorResult(fmt.Sprintf("Error detecting repository: %v", err)), nil
+	}
+
+	mgr, err := memory.NewManager(repo.Root)
+	if err != nil {
+		return m.errorResult(fmt.Sprintf("Error initializing memory manager: %v", err)), nil
+	}
+	defer mgr.Close()
+
+	err = mgr.Add(memory.Memory{
+		ID:         discoveryRecord.ID,
+		Type:       "discovery",
+		Title:      title,
+		Content:    finding,
+		SessionID:  currentSession.ID,
+		Path:       "mcp://record_discovery",
+		Importance: 0.7,
+	})
+	if err != nil {
+		return m.errorResult(fmt.Sprintf("Error saving discovery to memory: %v", err)), nil
 	}
 
 	return m.textResult("Discovery recorded successfully"), nil
@@ -541,7 +596,7 @@ func (m *Manager) handleRecordFailure(
 
 	eventsManager := events.NewManager(m.storage)
 
-	_, err = eventsManager.CreateFailure(
+	failureRecord, err := eventsManager.CreateFailure(
 		currentSession.ID,
 		title,
 		attempted,
@@ -550,6 +605,39 @@ func (m *Manager) handleRecordFailure(
 	)
 	if err != nil {
 		return m.errorResult(fmt.Sprintf("Error creating failure: %v", err)), nil
+	}
+
+	repo, err := repository.Detect()
+	if err != nil {
+		return m.errorResult(fmt.Sprintf("Error detecting repository: %v", err)), nil
+	}
+
+	mgr, err := memory.NewManager(repo.Root)
+	if err != nil {
+		return m.errorResult(fmt.Sprintf("Error initializing memory manager: %v", err)), nil
+	}
+	defer mgr.Close()
+
+	content := "Attempted: " + attempted + `
+
+Why it failed: ` + why
+	if lessons != "" {
+		content = content + `
+
+Lessons: ` + lessons
+	}
+
+	err = mgr.Add(memory.Memory{
+		ID:         failureRecord.ID,
+		Type:       "failure",
+		Title:      title,
+		Content:    content,
+		SessionID:  currentSession.ID,
+		Path:       "mcp://record_failure",
+		Importance: 0.6,
+	})
+	if err != nil {
+		return m.errorResult(fmt.Sprintf("Error saving failure to memory: %v", err)), nil
 	}
 
 	return m.textResult("Failure recorded successfully"), nil
@@ -577,7 +665,7 @@ func (m *Manager) handleRecordConstraint(
 
 	eventsManager := events.NewManager(m.storage)
 
-	_, err = eventsManager.CreateConstraint(
+	constraintRecord, err := eventsManager.CreateConstraint(
 		currentSession.ID,
 		title,
 		constraint,
@@ -585,6 +673,37 @@ func (m *Manager) handleRecordConstraint(
 	)
 	if err != nil {
 		return m.errorResult(fmt.Sprintf("Error creating constraint: %v", err)), nil
+	}
+
+	repo, err := repository.Detect()
+	if err != nil {
+		return m.errorResult(fmt.Sprintf("Error detecting repository: %v", err)), nil
+	}
+
+	mgr, err := memory.NewManager(repo.Root)
+	if err != nil {
+		return m.errorResult(fmt.Sprintf("Error initializing memory manager: %v", err)), nil
+	}
+	defer mgr.Close()
+
+	content := constraint
+	if reason != "" {
+		content = constraint + `
+
+Reason: ` + reason
+	}
+
+	err = mgr.Add(memory.Memory{
+		ID:         constraintRecord.ID,
+		Type:       "constraint",
+		Title:      title,
+		Content:    content,
+		SessionID:  currentSession.ID,
+		Path:       "mcp://record_constraint",
+		Importance: 0.8,
+	})
+	if err != nil {
+		return m.errorResult(fmt.Sprintf("Error saving constraint to memory: %v", err)), nil
 	}
 
 	return m.textResult("Constraint recorded successfully"), nil
