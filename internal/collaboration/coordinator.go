@@ -256,7 +256,7 @@ func (c *Coordinator) UpdateCoordination(coordID, status string, result *Result)
 // GetCoordinations retrieves coordinations for an agent
 func (c *Coordinator) GetCoordinations(agentID string) []*Coordination {
 	c.mu.RLock()
-	defer c.mu.Unlock()
+	defer c.mu.RUnlock()
 
 	var coords []*Coordination
 	for _, coord := range c.coordinations {
@@ -271,7 +271,7 @@ func (c *Coordinator) GetCoordinations(agentID string) []*Coordination {
 // GetRecentActivity gets recent activity across all agents
 func (c *Coordinator) GetRecentActivity(duration time.Duration, limit int) []*Result {
 	c.mu.RLock()
-	defer c.mu.Unlock()
+	defer c.mu.RUnlock()
 
 	cutoff := time.Now().Add(-duration)
 	var recent []*Result

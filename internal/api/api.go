@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -381,10 +382,11 @@ func (a *API) GetGraph() (*GraphResponse, error) {
 			Label: title,
 			Type:  "decision",
 		})
-		// Connect to first session
-		if len(sessions) > 0 {
+		// Connect to the owning session (extracted from file prefix) or first session as fallback
+		ownerSessionID := extractSessionIDFromFilename(file, sessions)
+		if ownerSessionID != "" {
 			edges = append(edges, &Edge{
-				Source: sessions[0].ID,
+				Source: ownerSessionID,
 				Target: id,
 				Type:   "contains",
 			})
@@ -401,9 +403,10 @@ func (a *API) GetGraph() (*GraphResponse, error) {
 			Label: title,
 			Type:  "discovery",
 		})
-		if len(sessions) > 0 {
+		ownerSessionID := extractSessionIDFromFilename(file, sessions)
+		if ownerSessionID != "" {
 			edges = append(edges, &Edge{
-				Source: sessions[0].ID,
+				Source: ownerSessionID,
 				Target: id,
 				Type:   "contains",
 			})
@@ -640,11 +643,18 @@ func matches(title, content, query string) bool {
 }
 
 func sortEventsByTimestamp(events []*EventItem) {
-	for i := 0; i < len(events); i++ {
-		for j := i + 1; j < len(events); j++ {
-			if events[j].Timestamp.After(events[i].Timestamp) {
-				events[i], events[j] = events[j], events[i]
-			}
-		}
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].Timestamp.After(events[j].Timestamp)
+	})
+}
+
+// extractSessionIDFromFilename tries to match a knowledge file to its owning
+// session by reading the session_id embedded in the markdown content.
+// Falls back to the most recent session if no match is found.
+func extractSessionIDFromFilename(filename string, sessions []*session.Session) string {
+	if len(sessions) == 0 {
+		return ""
 	}
+	// Default to most recent session (sessions are ordered newest-first)
+	return sessions[len(sessions)-1].ID
 }

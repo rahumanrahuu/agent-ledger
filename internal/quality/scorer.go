@@ -282,7 +282,7 @@ func (s *Scorer) GetTopItems(itemType string, limit int) []*AggregateScore {
 // GetMetrics gets quality metrics summary
 func (s *Scorer) GetMetrics(itemType string) map[string]interface{} {
 	s.mu.RLock()
-	defer s.mu.Unlock()
+	defer s.mu.RUnlock()
 
 	var records []*ScoreRecord
 	for _, record := range s.records {

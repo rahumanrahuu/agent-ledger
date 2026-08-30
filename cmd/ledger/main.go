@@ -17,6 +17,7 @@ import (
 	"agent-ledger/internal/repository"
 	"agent-ledger/internal/session"
 	"agent-ledger/internal/storage"
+	"agent-ledger/internal/validator"
 	"agent-ledger/ui"
 )
 
@@ -946,70 +947,128 @@ func handleValidate() {
 	}
 
 	// Check if agent ledger exists
-	storage := storage.New(repo.Root)
-	if !storage.Exists() {
+	st := storage.New(repo.Root)
+	if !st.Exists() {
 		fmt.Println("Agent ledger not initialized. Run 'agent-ledger init' first.")
 		os.Exit(1)
 	}
 
 	fmt.Println("Validating Agent Ledger...")
+	fmt.Println()
 
-	var issues []string
+	v := validator.NewValidator()
 
-	// Validate session records
-	sessions, err := storage.ListDirectories("sessions")
+	// Validate sessions
+	sessionDirs, err := st.ListDirectories("sessions")
 	if err != nil {
-		issues = append(issues, fmt.Sprintf("Failed to list sessions: %v", err))
+		v.AddIssue(validator.LevelError, "sessions", fmt.Sprintf("Failed to list sessions: %v", err), "sessions/", "Check .agent/sessions directory permissions")
 	} else {
-		for _, sessionID := range sessions {
+		for _, sessionID := range sessionDirs {
 			metadataPath := fmt.Sprintf("sessions/%s/metadata.json", sessionID)
-			if !storage.FileExists(metadataPath) {
-				issues = append(issues, fmt.Sprintf("Session %s missing metadata.json", sessionID))
+			if !st.FileExists(metadataPath) {
+				v.AddIssue(validator.LevelError, "session", fmt.Sprintf("Session %s missing metadata.json", sessionID), metadataPath, "The session folder exists but has no metadata")
+			} else {
+				var meta struct {
+					ID        string  `json:"id"`
+					Agent     string  `json:"agent,omitempty"`
+					Model     string  `json:"model,omitempty"`
+					Branch    string  `json:"branch"`
+				}
+				if readErr := st.ReadJSON(metadataPath, &meta); readErr == nil {
+					v.ValidateSessionMetadata(meta.ID, meta.Agent, meta.Model, meta.Branch)
+				}
 			}
 		}
 	}
 
-	// Validate checkpoint refs
-	// Check if checkpoint refs exist in Git
-	refOutput, err := git.Command("show-ref")
-	if err == nil {
-		refs := strings.Split(refOutput, "\n")
-		checkpointRefs := 0
-		for _, ref := range refs {
+	// Validate semantic records
+	decisions, _ := st.ListFiles("decisions")
+	discoveries, _ := st.ListFiles("discoveries")
+	failures, _ := st.ListFiles("failures")
+	constraints, _ := st.ListFiles("constraints")
+
+	for _, file := range decisions {
+		path := "decisions/" + file
+		content, readErr := st.ReadMarkdown(path)
+		v.ValidateRecord("decision", file, file, content, path)
+		v.ValidateFileFormat(path, content)
+		if readErr != nil {
+			v.AddIssue(validator.LevelError, "decision", fmt.Sprintf("Failed to read: %v", readErr), path, "Check file permissions")
+		}
+	}
+	for _, file := range discoveries {
+		path := "discoveries/" + file
+		content, _ := st.ReadMarkdown(path)
+		v.ValidateRecord("discovery", file, file, content, path)
+		v.ValidateFileFormat(path, content)
+	}
+	for _, file := range failures {
+		path := "failures/" + file
+		content, _ := st.ReadMarkdown(path)
+		v.ValidateRecord("failure", file, file, content, path)
+		v.ValidateFileFormat(path, content)
+	}
+	for _, file := range constraints {
+		path := "constraints/" + file
+		content, _ := st.ReadMarkdown(path)
+		v.ValidateRecord("constraint", file, file, content, path)
+		v.ValidateFileFormat(path, content)
+	}
+
+	// Check checkpoint refs in Git
+	refOutput, refErr := git.Command("show-ref")
+	if refErr == nil {
+		var checkpointRefs int
+		for _, ref := range strings.Split(refOutput, "\n") {
 			if strings.Contains(ref, "refs/agents/sessions/") {
 				checkpointRefs++
 			}
 		}
-		fmt.Printf("Found %d checkpoint refs in Git\n", checkpointRefs)
+		fmt.Printf("Git checkpoint refs: %d\n", checkpointRefs)
 	}
 
-	// Validate semantic records
-	decisions, _ := storage.ListFiles("decisions")
-	discoveries, _ := storage.ListFiles("discoveries")
-	failures, _ := storage.ListFiles("failures")
-	constraints, _ := storage.ListFiles("constraints")
+	// Overall counts
+	totalRecords := len(decisions) + len(discoveries) + len(failures) + len(constraints)
+	comp := validator.RunComprehensiveValidation(len(sessionDirs), totalRecords)
+	for _, issue := range comp.Issues {
+		v.AddIssue(issue.Level, issue.Category, issue.Message, issue.Path, issue.Suggestion)
+	}
 
-	fmt.Printf("Semantic records: %d decisions, %d discoveries, %d failures, %d constraints\n",
-		len(decisions), len(discoveries), len(failures), len(constraints))
+	// Print results
+	result := v.Result()
 
-	// Check for malformed JSON
-	for _, file := range decisions {
-		path := "decisions/" + file
-		content, err := storage.ReadMarkdown(path)
-		if err != nil {
-			issues = append(issues, fmt.Sprintf("Failed to read decision %s: %v", file, err))
-		} else if len(content) == 0 {
-			issues = append(issues, fmt.Sprintf("Decision %s is empty", file))
+	fmt.Printf("Sessions: %d  |  Records: %d decisions, %d discoveries, %d failures, %d constraints\n",
+		len(sessionDirs), len(decisions), len(discoveries), len(failures), len(constraints))
+	fmt.Println()
+
+	if len(result.Issues) == 0 {
+		fmt.Println("✓ Validation passed — no issues found")
+		return
+	}
+
+	// Print issues grouped by level
+	for _, issue := range result.Issues {
+		var prefix string
+		switch issue.Level {
+		case validator.LevelError:
+			prefix = "[ERROR]"
+		case validator.LevelWarning:
+			prefix = "[WARN] "
+		case validator.LevelInfo:
+			prefix = "[INFO] "
+		}
+		fmt.Printf("%s %s: %s\n", prefix, issue.Category, issue.Message)
+		if issue.Suggestion != "" {
+			fmt.Printf("         → %s\n", issue.Suggestion)
 		}
 	}
 
-	if len(issues) == 0 {
-		fmt.Println("Validation passed: No issues found")
+	fmt.Println()
+	if result.Valid {
+		fmt.Printf("Validation completed in %s — %d warning(s), 0 errors\n", result.Duration, result.Warnings)
 	} else {
-		fmt.Printf("Validation found %d issue(s):\n", len(issues))
-		for _, issue := range issues {
-			fmt.Printf("  - %s\n", issue)
-		}
+		fmt.Printf("Validation completed in %s — %d error(s), %d warning(s)\n", result.Duration, result.Errors, result.Warnings)
+		os.Exit(1)
 	}
 }
 
