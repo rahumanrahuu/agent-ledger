@@ -34,6 +34,7 @@ export default function Timeline() {
   const eventParam = searchParams.get('event');
 
   const [activeTypes, setActiveTypes] = useState<EventType[]>(typeParam ? [typeParam] : []);
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
   const { state, reload } = useApi(getEvents, []);
 
   const events = state.status === 'ok' ? state.data : [];
@@ -183,8 +184,25 @@ export default function Timeline() {
             onClose={closeInspector}
           >
             <div>
-              <SectionLabel>Description</SectionLabel>
-              <p className="text-sm text-foreground leading-relaxed">{selectedEvent.description}</p>
+              <div className="flex items-center justify-between mb-2">
+                <SectionLabel>Description</SectionLabel>
+                <button
+                  onClick={() => {
+                    const promptText = `[Agent Event - ${selectedEvent.type.toUpperCase()}] Title: ${selectedEvent.title}\nDescription: ${selectedEvent.description}\nTimestamp: ${selectedEvent.timestamp}`;
+                    navigator.clipboard.writeText(promptText);
+                    setCopiedPrompt(true);
+                    setTimeout(() => setCopiedPrompt(false), 2000);
+                  }}
+                  className="text-xs flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary-light text-primary hover:bg-primary/20 transition-colors font-medium cursor-pointer"
+                >
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                    <rect x="4" y="4" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+                    <path d="M2.5 9.5H2a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v.5" stroke="currentColor" strokeWidth="1.3"/>
+                  </svg>
+                  {copiedPrompt ? '✓ Copied Context!' : 'Copy for AI Prompt'}
+                </button>
+              </div>
+              <p className="text-sm text-foreground leading-relaxed bg-muted/40 rounded-lg p-3 border border-border">{selectedEvent.description}</p>
             </div>
             <div>
               <SectionLabel>Details</SectionLabel>

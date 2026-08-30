@@ -99,9 +99,9 @@ export function Skeleton({ className = '' }: { className?: string }) {
   return <div className={`animate-pulse rounded-md bg-muted ${className}`} />;
 }
 
-export function SkeletonCard() {
+export function SkeletonCard({ className = '' }: { className?: string }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+    <div className={`bg-card border border-border rounded-xl p-4 space-y-3 ${className}`}>
       <Skeleton className="h-3 w-24" />
       <Skeleton className="h-7 w-16" />
       <Skeleton className="h-3 w-32" />
@@ -374,12 +374,16 @@ export function FilterPill({ label, count, active, variant = 'default', onClick 
 // ─── Relative time ───────────────────────────────────────────────────────────
 
 export function formatRelative(iso: string) {
+  if (!iso) return 'recently';
   const d = new Date(iso);
+  if (isNaN(d.getTime())) return 'recently';
   const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
+  const diffMs = Math.max(0, now.getTime() - d.getTime());
+  const diffMin = Math.floor(diffMs / 60000);
   const diffH = Math.floor(diffMs / 3600000);
   const diffD = Math.floor(diffMs / 86400000);
-  if (diffH < 1) return 'just now';
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
   if (diffH < 24) return `${diffH}h ago`;
   if (diffD < 7) return `${diffD}d ago`;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });

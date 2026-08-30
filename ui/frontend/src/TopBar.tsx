@@ -11,6 +11,7 @@ interface TopBarProps {
   commit?: string;
   lastActivity?: string;
   wsStatus: WsStatus;
+  onOpenCommandPalette?: () => void;
 }
 
 const wsLabels: Record<WsStatus, string> = {
@@ -34,7 +35,7 @@ const wsTextColors: Record<WsStatus, string> = {
   disconnected: 'text-muted-foreground',
 };
 
-export default function TopBar({ projectName, branch, commit, lastActivity, wsStatus }: TopBarProps) {
+export default function TopBar({ projectName, branch, commit, lastActivity, wsStatus, onOpenCommandPalette }: TopBarProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -105,7 +106,15 @@ export default function TopBar({ projectName, branch, commit, lastActivity, wsSt
             onBlur={() => setTimeout(() => setShowResults(false), 150)}
             className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none"
           />
-          {!query && <span className="text-xs text-muted-foreground hidden lg:block">⌘K</span>}
+          {!query && (
+            <button
+              onClick={onOpenCommandPalette}
+              title="Open Command Palette (⌘K)"
+              className="text-xs text-muted-foreground hover:text-foreground font-mono bg-muted-foreground/10 px-1.5 py-0.5 rounded border border-border hidden lg:block cursor-pointer transition-colors"
+            >
+              ⌘K
+            </button>
+          )}
           {query && (
             <button onClick={() => { setQuery(''); setResults([]); setShowResults(false); }}
               className="text-muted-foreground hover:text-foreground">

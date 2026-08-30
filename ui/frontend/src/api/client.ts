@@ -193,11 +193,16 @@ function normalizeSession(session: BackendSession, counts: SessionCounts = {}): 
     ['running', 'completed', 'failed', 'paused'].includes(session.status)
       ? session.status as Session['status'] : 'completed';
   const total = Object.values(counts).reduce((sum, count) => sum + (count || 0), 0);
+
+  // Dynamic session naming based on agent & model parameters passed by MCP tools
+  const agentName = session.agent && session.agent !== 'unknown' ? session.agent : 'AI Agent';
+  const displayName = session.model ? `${agentName} (${session.model})` : agentName;
+
   return {
     id: session.id,
-    name: session.agent || `Session ${session.id.slice(0, 8)}`,
-    agent: session.agent || 'Unknown agent',
-    model: session.model || 'Unknown model',
+    name: displayName,
+    agent: agentName,
+    model: session.model || '',
     branch: session.branch || '',
     status,
     eventCount: total,
@@ -282,3 +287,9 @@ export function createWebSocket(onEvent: (e: MessageEvent) => void, onStatusChan
 }
 
 export type WsStatus = 'connected' | 'connecting' | 'reconnecting' | 'disconnected';
+
+export async function getContext(task?: string) {
+  const params = task ? `?task=${encodeURIComponent(task)}` : '';
+  return request(`/context${params}`, {} as import('./types').ProjectContextData);
+}
+

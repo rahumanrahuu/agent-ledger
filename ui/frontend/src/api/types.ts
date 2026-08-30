@@ -110,3 +110,20 @@ export interface LiveEvent {
   type: 'event' | 'session' | 'memory' | 'graph' | 'ping';
   payload?: unknown;
 }
+
+export interface ProjectContextData {
+  Project?: string;
+  CurrentState?: string;
+  Architecture?: string;
+  RecentDevelopment?: string;
+  TestingStatus?: string;
+  RecentlyChanged?: { Path: string; Status: string }[];
+  ImportantDecisions?: { Title: string; Decision: string; Rationale: string; Agent: string; Timestamp: string }[];
+  Discoveries?: { Title: string; Finding: string; Agent: string; Timestamp: string }[];
+  KnownFailures?: { Title: string; Error: string; Resolution: string; Agent: string }[];
+  Constraints?: { Title: string; Constraint: string; Scope: string }[];
+  LatestHandoff?: string;
+  Recommendations?: string[];
+  TaskContext?: string;
+}
+

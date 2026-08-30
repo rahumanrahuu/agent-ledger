@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import type { Theme } from './hooks/useTheme';
 
 const navItems = [
   {
@@ -10,6 +11,16 @@ const navItems = [
         <rect x="8.5" y="1" width="5.5" height="5.5" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
         <rect x="1" y="8.5" width="5.5" height="5.5" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
         <rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+      </svg>
+    ),
+  },
+  {
+    to: '/context',
+    label: 'Project Context',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <path d="M2.5 3.5h10M2.5 6.5h10M2.5 9.5h7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+        <rect x="1" y="1.5" width="13" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
       </svg>
     ),
   },
@@ -68,49 +79,104 @@ const navItems = [
 interface SidebarProps {
   projectName?: string;
   version?: string;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+  theme: Theme;
+  setTheme: (t: Theme) => void;
 }
 
-export default function Sidebar({ projectName, version }: SidebarProps) {
+export default function Sidebar({
+  projectName,
+  version,
+  isCollapsed,
+  onToggleCollapse,
+  theme,
+  setTheme,
+}: SidebarProps) {
   return (
-    <aside className="w-56 shrink-0 h-full bg-card border-r border-border flex flex-col">
-      <div className="px-4 h-14 flex items-center gap-2.5 border-b border-border">
-        <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
-          <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-            <path d="M7 1.5L2.5 4v6l4.5 2.5 4.5-2.5V4L7 1.5Z" stroke="white" strokeWidth="1.3" strokeLinejoin="round"/>
-            <path d="M7 1.5v11M2.5 4l4.5 2.5 4.5-2.5" stroke="white" strokeWidth="1.1" strokeLinejoin="round"/>
-          </svg>
+    <aside
+      className={`shrink-0 h-full bg-card border-r border-border flex flex-col transition-all duration-200 ${
+        isCollapsed ? 'w-16' : 'w-56'
+      }`}
+    >
+      {/* Top logo & header */}
+      <div className="px-3.5 h-14 flex items-center justify-between border-b border-border">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0 shadow-xs">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+              <path d="M7 1.5L2.5 4v6l4.5 2.5 4.5-2.5V4L7 1.5Z" stroke="white" strokeWidth="1.3" strokeLinejoin="round"/>
+              <path d="M7 1.5v11M2.5 4l4.5 2.5 4.5-2.5" stroke="white" strokeWidth="1.1" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          {!isCollapsed && (
+            <span className="font-semibold text-sm text-foreground tracking-tight truncate">
+              Agent Ledger
+            </span>
+          )}
         </div>
-        <span className="font-semibold text-sm text-foreground tracking-tight">Agent Ledger</span>
+
+        <button
+          onClick={onToggleCollapse}
+          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted transition-colors shrink-0"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            {isCollapsed ? (
+              <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            ) : (
+              <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            )}
+          </svg>
+        </button>
       </div>
 
-      <nav className="flex-1 py-3 px-2 overflow-y-auto">
-        <div className="space-y-0.5">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-100 ${
-                  isActive
-                    ? 'bg-primary-light text-primary'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                }`
-              }
-            >
-              <span className="shrink-0">{item.icon}</span>
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-        </div>
+      {/* Nav items */}
+      <nav className="flex-1 py-3 px-2 overflow-y-auto space-y-0.5">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            title={isCollapsed ? item.label : undefined}
+            className={({ isActive }) =>
+              `w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-100 ${
+                isActive
+                  ? 'bg-primary-light text-primary font-semibold'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              } ${isCollapsed ? 'justify-center px-0' : ''}`
+            }
+          >
+            <span className="shrink-0">{item.icon}</span>
+            {!isCollapsed && <span className="truncate">{item.label}</span>}
+          </NavLink>
+        ))}
       </nav>
 
-      <div className="p-3 border-t border-border">
-        <div className="px-1 py-1 min-w-0">
-          <p className="text-xs font-medium text-foreground truncate">{projectName || 'Agent Ledger'}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5 font-mono truncate">
-            {version ? `Backend ${version}` : 'Local workspace'}
-          </p>
-        </div>
+      {/* Bottom section: Theme switcher & workspace info */}
+      <div className="p-2 border-t border-border space-y-1">
+        <button
+          onClick={() => {
+            const nextTheme: Theme = theme === 'dark' ? 'light' : theme === 'light' ? 'system' : 'dark';
+            setTheme(nextTheme);
+          }}
+          title={`Theme: ${theme}`}
+          className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors ${
+            isCollapsed ? 'justify-center px-0' : ''
+          }`}
+        >
+          <span className="shrink-0 text-sm">
+            {theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '💻'}
+          </span>
+          {!isCollapsed && <span className="capitalize">{theme} Theme</span>}
+        </button>
+
+        {!isCollapsed && (
+          <div className="px-2.5 py-1 min-w-0">
+            <p className="text-xs font-medium text-foreground truncate">{projectName || 'Agent Ledger'}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5 font-mono truncate">
+              {version ? `Backend ${version}` : 'Local workspace'}
+            </p>
+          </div>
+        )}
       </div>
     </aside>
   );
