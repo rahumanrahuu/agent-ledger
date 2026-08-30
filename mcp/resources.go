@@ -3,12 +3,15 @@ package mcp
 import (
 	"context"
 	"fmt"
-	
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"agent-ledger/internal/checkpoint"
 	agentcontext "agent-ledger/internal/context"
+	"agent-ledger/internal/collaboration"
 	"agent-ledger/internal/events"
 	"agent-ledger/internal/history"
+	"agent-ledger/internal/memory"
+	"agent-ledger/internal/quality"
 	"agent-ledger/internal/repository"
 	"agent-ledger/internal/session"
 	"agent-ledger/internal/storage"
@@ -21,6 +24,10 @@ type Manager struct {
 	historyManager    *history.Manager
 	contextManager    *agentcontext.Manager
 	storage           *storage.Storage
+	coordinator       *collaboration.Coordinator
+	scorer            *quality.Scorer
+	memoryFunc        func(string) (*memory.Manager, error)
+	repositoryFunc    func() (*repository.Repository, error)
 }
 
 // NewManager creates a new MCP manager
@@ -29,18 +36,34 @@ func NewManager(st *storage.Storage) (*Manager, error) {
 	if err := repository.MustBeInRepository(); err != nil {
 		return nil, err
 	}
-	
+
 	sessionManager := session.NewManager(st)
 	checkpointManager := checkpoint.NewManager(st)
 	historyManager := history.NewManager(sessionManager, checkpointManager, st)
 	contextManager := agentcontext.NewManager(historyManager, checkpointManager, st)
-	
+
+	// Create collaboration and quality systems
+	coordinator := collaboration.NewCoordinator()
+	scorer := quality.NewScorer()
+
+	// Create dependency injection functions
+	memoryFunc := func(root string) (*memory.Manager, error) {
+		return memory.NewManager(root)
+	}
+	repositoryFunc := func() (*repository.Repository, error) {
+		return repository.Detect()
+	}
+
 	return &Manager{
 		sessionManager:    sessionManager,
 		checkpointManager: checkpointManager,
 		historyManager:    historyManager,
 		contextManager:    contextManager,
 		storage:           st,
+		coordinator:       coordinator,
+		scorer:            scorer,
+		memoryFunc:        memoryFunc,
+		repositoryFunc:    repositoryFunc,
 	}, nil
 }
 
