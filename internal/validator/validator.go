@@ -104,8 +104,10 @@ func (v *Validator) ValidateRecord(recordType, id, title, content, path string) 
 		v.AddIssue(LevelWarning, recordType, "Record content is very large", path, fmt.Sprintf("Content is %d chars, consider splitting into multiple records", len(content)))
 	}
 
-	if !strings.HasPrefix(path, recordType+"/") {
-		v.AddIssue(LevelWarning, recordType, "Record path doesn't match type", path, fmt.Sprintf("Record of type %s should be in %s/ directory", recordType, recordType))
+	// Accept both exact and common plural forms (e.g. "decision" and "decisions", "discovery" and "discoveries")
+	validPrefix := strings.HasPrefix(path, recordType+"/") || strings.HasPrefix(path, recordType+"s/") || strings.HasPrefix(path, recordType+"ies/") || strings.HasPrefix(path, strings.TrimSuffix(recordType, "y")+"ies/")
+	if !validPrefix {
+		v.AddIssue(LevelWarning, recordType, "Record path doesn't match type", path, fmt.Sprintf("Record of type %s should be in %s/ or %ss/ directory", recordType, recordType, recordType))
 	}
 }
 
