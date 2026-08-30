@@ -30,6 +30,7 @@ export default function Memories() {
   const [selectedTypes, setSelectedTypes] = useState<MemoryType[]>([]);
   const [selectedImportances, setSelectedImportances] = useState<ImportanceLevel[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get('id'));
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
 
   const { state, reload } = useApi(getMemories, []);
 
@@ -155,7 +156,24 @@ export default function Memories() {
             width="flex-1"
           >
             <div>
-              <SectionLabel>Content</SectionLabel>
+              <div className="flex items-center justify-between mb-2">
+                <SectionLabel>Content</SectionLabel>
+                <button
+                  onClick={() => {
+                    const promptText = `[Agent Memory - ${selected.type.toUpperCase()}] (${selected.importance.toUpperCase()} Importance)\nContent: ${selected.content}${selected.source ? `\nSource: ${selected.source}` : ''}${selected.tags.length ? `\nTags: ${selected.tags.join(', ')}` : ''}`;
+                    navigator.clipboard.writeText(promptText);
+                    setCopiedPrompt(true);
+                    setTimeout(() => setCopiedPrompt(false), 2000);
+                  }}
+                  className="text-xs flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary-light text-primary hover:bg-primary/20 transition-colors font-medium cursor-pointer"
+                >
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                    <rect x="4" y="4" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+                    <path d="M2.5 9.5H2a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v.5" stroke="currentColor" strokeWidth="1.3"/>
+                  </svg>
+                  {copiedPrompt ? '✓ Copied Context!' : 'Copy for AI Prompt'}
+                </button>
+              </div>
               <p className="text-sm text-foreground leading-relaxed bg-muted/40 rounded-lg p-4 border border-border">
                 {selected.content}
               </p>
@@ -164,7 +182,7 @@ export default function Memories() {
             {selected.source && (
               <div>
                 <SectionLabel>Source</SectionLabel>
-                <p className="text-xs text-muted-foreground italic">{selected.source}</p>
+                <p className="text-xs text-muted-foreground italic font-mono bg-muted/50 p-2 rounded border border-border">{selected.source}</p>
               </div>
             )}
 

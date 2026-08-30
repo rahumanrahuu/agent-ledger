@@ -15,7 +15,11 @@ import (
 	"time"
 
 	"agent-ledger/internal/api"
+	"agent-ledger/internal/checkpoint"
+	agentcontext "agent-ledger/internal/context"
+	"agent-ledger/internal/history"
 	"agent-ledger/internal/repository"
+	"agent-ledger/internal/session"
 	"agent-ledger/internal/storage"
 	"github.com/gorilla/websocket"
 )
@@ -57,6 +61,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/graph", s.handleGraph)
 	mux.HandleFunc("/api/search", s.handleSearch)
 	mux.HandleFunc("/api/memories", s.handleMemories)
+	mux.HandleFunc("/api/context", s.handleContext)
 	mux.HandleFunc("/api/live", s.handleLive)
 
 	// Frontend - will be served from embedded assets in the future
@@ -298,6 +303,29 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(results)
+}
+
+// handleContext serves compiled project context
+func (s *Server) handleContext(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	task := r.URL.Query().Get("task")
+	sessionManager := session.NewManager(s.storage)
+	checkpointManager := checkpoint.NewManager(s.storage)
+	historyManager := history.NewManager(sessionManager, checkpointManager, s.storage)
+	contextManager := agentcontext.NewManager(historyManager, checkpointManager, s.storage)
+
+	ctxData, err := contextManager.Compile(s.repo, task)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ctxData)
 }
 
 // handleFrontend serves the frontend application

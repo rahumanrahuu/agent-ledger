@@ -31,11 +31,11 @@ var (
 		"properties": {
 			"agent": {
 				"type": "string",
-				"description": "Optional arbitrary agent identifier"
+				"description": "Optional AI coding agent or IDE name (e.g. 'Antigravity IDE', 'Claude Code', 'Cursor AI', 'Codex')"
 			},
 			"model": {
 				"type": "string",
-				"description": "Optional arbitrary model identifier"
+				"description": "Optional AI model identifier (e.g. 'gemini-3.6-flash', 'claude-3-7-sonnet', 'gpt-4o')"
 			}
 		}
 	}`)

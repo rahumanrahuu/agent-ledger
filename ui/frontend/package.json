@@ -1,5 +1,5 @@
 {
-  "name": "figma-make-app",
+  "name": "agent-ledger-ui",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -11,6 +11,8 @@
     "format": "oxfmt"
   },
   "dependencies": {
+    "@types/d3-force": "^3.0.10",
+    "d3-force": "^3.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.18.2"

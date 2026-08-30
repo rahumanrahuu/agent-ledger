@@ -24,5 +24,22 @@ export function useApi<T>(fetcher: () => Promise<T>, deps: unknown[] = []) {
     return () => { mountedRef.current = false; };
   }, [load]);
 
+  // Live WebSocket update subscription for silent background refresh
+  useEffect(() => {
+    const handleLiveUpdate = async () => {
+      try {
+        const data = await fetcher();
+        if (mountedRef.current) {
+          setState({ status: 'ok', data });
+        }
+      } catch (err) {
+        console.warn('Live update fetch failed:', err);
+      }
+    };
+
+    window.addEventListener('al-websocket-message', handleLiveUpdate);
+    return () => window.removeEventListener('al-websocket-message', handleLiveUpdate);
+  }, [fetcher]);
+
   return { state, reload: load };
 }

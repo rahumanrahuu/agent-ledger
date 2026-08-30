@@ -2,12 +2,15 @@ package api
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
 	"agent-ledger/internal/checkpoint"
 	"agent-ledger/internal/events"
+	"agent-ledger/internal/git"
 	"agent-ledger/internal/history"
 	"agent-ledger/internal/memory"
 	"agent-ledger/internal/repository"
@@ -68,6 +71,7 @@ type OverviewResponse struct {
 }
 
 // GetOverview returns project overview data
+// GetOverview returns project overview data with real-time Git status and activity timestamp
 func (a *API) GetOverview() (*OverviewResponse, error) {
 	sessions, err := a.historyMgr.GetAllSessions("", "")
 	if err != nil {
@@ -78,23 +82,70 @@ func (a *API) GetOverview() (*OverviewResponse, error) {
 	discoveries, _ := a.storage.ListFiles("discoveries")
 	checkpoints := a.getAllCheckpoints(sessions)
 
+	// Dynamically query real-time Git branch and HEAD commit
+	currentBranch, errBranch := git.GetCurrentBranch()
+	if errBranch != nil || currentBranch == "" {
+		currentBranch = a.repo.Branch
+	}
+	currentCommit, errCommit := git.GetHeadCommit()
+	if errCommit != nil || currentCommit == "" {
+		currentCommit = a.repo.Head
+	}
+
 	projectName := "Agent Ledger Project"
 	if content, err := a.storage.ReadMarkdown("project.md"); err == nil && len(content) > 0 {
 		projectName = "Project"
 	}
 
+	// Calculate true latest activity timestamp across sessions, checkpoints, memories, and event files
+	var latestTime time.Time
+
+	for _, s := range sessions {
+		if s.EndTime != nil && s.EndTime.After(latestTime) {
+			latestTime = *s.EndTime
+		}
+		if s.StartTime.After(latestTime) {
+			latestTime = s.StartTime
+		}
+	}
+
+	for _, cp := range checkpoints {
+		if cp.Timestamp.After(latestTime) {
+			latestTime = cp.Timestamp
+		}
+	}
+
+	// Check file modification times in decisions, discoveries, failures, constraints
+	for _, cat := range []string{"decisions", "discoveries", "failures", "constraints"} {
+		files, _ := a.storage.ListFiles(cat)
+		for _, f := range files {
+			filePath := filepath.Join(a.storage.GetRoot(), cat, f)
+			if info, err := os.Stat(filePath); err == nil {
+				if info.ModTime().After(latestTime) {
+					latestTime = info.ModTime().UTC()
+				}
+			}
+		}
+	}
+
+	// Check memories
+	memories, _ := a.GetMemories("", "", 100)
+	for _, m := range memories {
+		if m.CreatedAt.After(latestTime) {
+			latestTime = m.CreatedAt.UTC()
+		}
+	}
+
 	var lastActivityTime *time.Time
-	if len(sessions) > 0 && sessions[len(sessions)-1].EndTime != nil {
-		lastActivityTime = sessions[len(sessions)-1].EndTime
-	} else if len(sessions) > 0 {
-		lastActivityTime = &sessions[len(sessions)-1].StartTime
+	if !latestTime.IsZero() {
+		lastActivityTime = &latestTime
 	}
 
 	return &OverviewResponse{
 		ProjectName:      projectName,
 		RepositoryRoot:   a.repo.Root,
-		CurrentBranch:    a.repo.Branch,
-		CurrentCommit:    a.repo.Head,
+		CurrentBranch:    currentBranch,
+		CurrentCommit:    currentCommit,
 		Version:          a.version,
 		SessionCount:     len(sessions),
 		DecisionCount:    len(decisions),
@@ -121,17 +172,30 @@ type SessionInfo struct {
 	Status    string     `json:"status"`
 }
 
-// GetSessions returns all sessions
+// GetSessions returns all sessions with accurate active vs completed status
 func (a *API) GetSessions() (*SessionListResponse, error) {
 	sessionList, err := a.historyMgr.GetAllSessions("", "")
 	if err != nil {
 		return &SessionListResponse{Sessions: []*SessionInfo{}}, nil
 	}
 
+	now := time.Now()
 	sessions := make([]*SessionInfo, len(sessionList))
+
+	// Find index of the most recently started session without EndTime
+	latestActiveIndex := -1
+	var latestActiveTime time.Time
+	for i, s := range sessionList {
+		if s.EndTime == nil && s.StartTime.After(latestActiveTime) {
+			latestActiveTime = s.StartTime
+			latestActiveIndex = i
+		}
+	}
+
 	for i, s := range sessionList {
 		status := "ended"
-		if s.EndTime == nil {
+		// A session is active ONLY if it has no EndTime AND it's the latest active session or started within 2 hours
+		if s.EndTime == nil && (i == latestActiveIndex || now.Sub(s.StartTime) <= 2*time.Hour) {
 			status = "active"
 		}
 
@@ -356,68 +420,97 @@ type Edge struct {
 	Type   string `json:"type"` // "contains", "relates_to"
 }
 
-// GetGraph returns the knowledge graph
+// GetGraph returns the complete knowledge graph
 func (a *API) GetGraph() (*GraphResponse, error) {
 	nodes := make([]*Node, 0)
 	edges := make([]*Edge, 0)
+	nodeMap := make(map[string]bool)
 
-	// Get sessions
+	addNode := func(n *Node) {
+		if !nodeMap[n.ID] {
+			nodeMap[n.ID] = true
+			nodes = append(nodes, n)
+		}
+	}
+
+	// 1. Get sessions
 	sessions, _ := a.historyMgr.GetAllSessions("", "")
+	sessionIDs := make(map[string]string)
 	for _, s := range sessions {
-		nodes = append(nodes, &Node{
+		sessionIDs[s.ID] = s.ID
+		label := s.Agent
+		if label == "" || label == "agent" {
+			if len(s.ID) >= 8 {
+				label = "Session " + s.ID[:8]
+			} else {
+				label = "Session " + s.ID
+			}
+		}
+		addNode(&Node{
 			ID:    s.ID,
-			Label: s.Agent,
+			Label: label,
 			Type:  "session",
 			Data:  s,
 		})
 	}
 
-	// Get decisions
-	decisions, _ := a.storage.ListFiles("decisions")
-	for _, file := range decisions {
-		id := extractIDFromFilename(file)
-		title := strings.TrimSuffix(file, ".md")
-		nodes = append(nodes, &Node{
-			ID:    id,
-			Label: title,
-			Type:  "decision",
-		})
-		// Connect to the owning session (extracted from file prefix) or first session as fallback
-		ownerSessionID := extractSessionIDFromFilename(file, sessions)
-		if ownerSessionID != "" {
-			edges = append(edges, &Edge{
-				Source: ownerSessionID,
-				Target: id,
-				Type:   "contains",
+	// 2. Helper to add category event nodes (decisions, discoveries, failures, constraints)
+	addCategory := func(category, nodeType string) {
+		files, _ := a.storage.ListFiles(category)
+		for _, file := range files {
+			path := category + "/" + file
+			content, _ := a.storage.ReadMarkdown(path)
+			id := extractIDFromFilename(file)
+			title := strings.TrimSuffix(file, ".md")
+			cleanTitle := strings.ReplaceAll(title, "-", " ")
+			if len(cleanTitle) > 36 {
+				cleanTitle = cleanTitle[:35] + "…"
+			}
+
+			addNode(&Node{
+				ID:    id,
+				Label: cleanTitle,
+				Type:  nodeType,
+				Data:  content,
 			})
+
+			foundSession := ""
+			for sessID := range sessionIDs {
+				if strings.Contains(content, sessID) {
+					foundSession = sessID
+					break
+				}
+			}
+			if foundSession != "" {
+				edges = append(edges, &Edge{
+					Source: foundSession,
+					Target: id,
+					Type:   "contains",
+				})
+			} else if len(sessions) > 0 {
+				edges = append(edges, &Edge{
+					Source: sessions[0].ID,
+					Target: id,
+					Type:   "contains",
+				})
+			}
 		}
 	}
 
-	// Get discoveries
-	discoveries, _ := a.storage.ListFiles("discoveries")
-	for _, file := range discoveries {
-		id := extractIDFromFilename(file)
-		title := strings.TrimSuffix(file, ".md")
-		nodes = append(nodes, &Node{
-			ID:    id,
-			Label: title,
-			Type:  "discovery",
-		})
-		ownerSessionID := extractSessionIDFromFilename(file, sessions)
-		if ownerSessionID != "" {
-			edges = append(edges, &Edge{
-				Source: ownerSessionID,
-				Target: id,
-				Type:   "contains",
-			})
-		}
-	}
+	addCategory("decisions", "decision")
+	addCategory("discoveries", "discovery")
+	addCategory("failures", "failure")
+	addCategory("constraints", "constraint")
 
-	// Get Git-native checkpoints and connect each one to its owning session.
+	// 3. Get Checkpoints
 	for _, cp := range a.getAllCheckpoints(sessions) {
-		nodes = append(nodes, &Node{
+		label := "Checkpoint " + cp.ID
+		if len(cp.ID) >= 8 {
+			label = "Checkpoint " + cp.ID[:8]
+		}
+		addNode(&Node{
 			ID:    cp.ID,
-			Label: cp.ID,
+			Label: label,
 			Type:  "checkpoint",
 			Data:  cp,
 		})
@@ -426,6 +519,31 @@ func (a *API) GetGraph() (*GraphResponse, error) {
 				Source: cp.SessionID,
 				Target: cp.ID,
 				Type:   "checkpoint_of",
+			})
+		}
+	}
+
+	// 4. Get Memories
+	memories, _ := a.GetMemories("", "", 100)
+	for _, mem := range memories {
+		label := mem.Title
+		if label == "" {
+			label = mem.Content
+		}
+		if len(label) > 36 {
+			label = label[:35] + "…"
+		}
+		addNode(&Node{
+			ID:    mem.ID,
+			Label: label,
+			Type:  mem.Type,
+			Data:  mem,
+		})
+		if mem.SessionID != "" && sessionIDs[mem.SessionID] != "" {
+			edges = append(edges, &Edge{
+				Source: mem.SessionID,
+				Target: mem.ID,
+				Type:   "remembers",
 			})
 		}
 	}
